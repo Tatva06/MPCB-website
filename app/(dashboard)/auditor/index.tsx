@@ -10,18 +10,18 @@ import {
 } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { useQuery } from '@tanstack/react-query';
-import { FadeInView } from '../../components/common/FadeInView';
+import { FadeInView } from '../../../components/common/FadeInView';
 
-import LeaderboardItem from '../../components/dashboard/LeaderboardItem';
-import MetricCard from '../../components/dashboard/MetricCard';
-import ResponsiveChartContainer from '../../components/common/ResponsiveChartContainer';
-import Skeleton from '../../components/common/Skeleton';
-import { ErrorBoundary } from '../../components/common/ErrorBoundary';
+import LeaderboardItem from '../../../components/dashboard/LeaderboardItem';
+import MetricCard from '../../../components/dashboard/MetricCard';
+import ResponsiveChartContainer from '../../../components/common/ResponsiveChartContainer';
+import Skeleton from '../../../components/common/Skeleton';
+import { ErrorBoundary } from '../../../components/common/ErrorBoundary';
 
-import { getChartsData, getDashboardMetrics, getFingerprints, getLeaderboard, getShapData } from '../../services/api';
-import { useThemeColor } from '../../hooks/useThemeColor';
-import { useAuth } from '../../context/AuthContext';
-import { supabase } from '../../services/supabase';
+import { getChartsData, getDashboardMetrics, getFingerprints, getLeaderboard, getShapData } from '../../../services/api';
+import { useThemeColor } from '../../../hooks/useThemeColor';
+import { useAuth } from '../../../context/AuthContext';
+import { supabase } from '../../../services/supabase';
 
 export default function ComprehensiveDashboard() {
   const { width } = useWindowDimensions();
