@@ -84,15 +84,12 @@ export default function RegionalAuditorsScreen() {
       setMyRegion(regionToFilter);
     }
 
-    // Fetch auditors – filtered by region for RMs, all for superadmin
-    let auditorsQuery = supabase
+    // Fetch ALL auditors regardless of role
+    const { data: auditorsData } = await supabase
       .from('profiles')
       .select('id, officer_id, full_name, region')
-      .eq('role', 'auditor');
-    if (regionToFilter) {
-      auditorsQuery = auditorsQuery.eq('region', regionToFilter);
-    }
-    const { data: auditorsData } = await auditorsQuery.order('full_name');
+      .eq('role', 'auditor')
+      .order('full_name');
     if (auditorsData) setAuditors(auditorsData as AuditorProfile[]);
 
     // Fetch assignments – RMs only see their region's assignments
