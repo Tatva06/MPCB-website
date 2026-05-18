@@ -104,8 +104,17 @@ export default function DashboardLayout() {
   }[user.role];
 
   const handleLogout = async () => {
-    await logout();
-    router.replace('/');
+    try {
+      await logout();
+    } finally {
+      if (typeof window !== 'undefined') {
+        window.localStorage.clear();
+        window.sessionStorage.clear();
+        window.location.href = '/';
+      } else {
+        router.replace('/');
+      }
+    }
   };
 
   const NavButton = ({ item }: { item: { label: string; icon: string; path: string } }) => {

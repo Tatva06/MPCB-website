@@ -34,6 +34,19 @@ const STATUS_COLORS = {
   completed: { bg: 'rgba(16,185,129,0.15)', border: 'rgba(16,185,129,0.4)', text: '#34d399' },
 };
 
+const AVAILABLE_FACTORIES = [
+  { id: 'FAC-001', name: 'Deepak Fertilizers' },
+  { id: 'FAC-002', name: 'IG Petrochemicals' },
+  { id: 'FAC-003', name: 'Aarti Industries' },
+  { id: 'FAC-004', name: 'Taloja Copper' },
+  { id: 'FAC-005', name: 'Reliance Industries' },
+  { id: 'FAC-006', name: 'Tata Steel' },
+  { id: 'FAC-007', name: 'Hindalco Industries' },
+  { id: 'FAC-008', name: 'JSW Steel' },
+  { id: 'FAC-009', name: 'Mahindra & Mahindra' },
+  { id: 'FAC-010', name: 'Larsen & Toubro' },
+];
+
 export default function RegionalAuditorsScreen() {
   const { user } = useAuth();
   const { width } = useWindowDimensions();
@@ -49,8 +62,8 @@ export default function RegionalAuditorsScreen() {
 
   // Assignment form
   const [selectedAuditorId, setSelectedAuditorId] = useState('');
-  const [factoryName, setFactoryName] = useState('');
-  const [factoryId, setFactoryId] = useState('');
+  const [selectedFactoryId, setSelectedFactoryId] = useState('');
+  const [factorySearch, setFactorySearch] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [notes, setNotes] = useState('');
 
@@ -87,8 +100,8 @@ export default function RegionalAuditorsScreen() {
   };
 
   const handleAssign = async () => {
-    if (!selectedAuditorId || !factoryName.trim()) {
-      setError('Please select an auditor and enter the factory name.');
+    if (!selectedAuditorId || !selectedFactoryId) {
+      setError('Please select an auditor and a factory.');
       return;
     }
 
@@ -96,11 +109,12 @@ export default function RegionalAuditorsScreen() {
     setError('');
 
     const auditor = auditors.find((a) => a.id === selectedAuditorId);
+    const factory = AVAILABLE_FACTORIES.find((f) => f.id === selectedFactoryId);
     const { data: myProfile } = await supabase.from('profiles').select('region').eq('id', user?.id).single();
 
     const { error: insertError } = await supabase.from('factory_assignments').insert({
-      factory_name: factoryName.trim(),
-      factory_id: factoryId.trim() || null,
+      factory_name: factory?.name || 'Unknown',
+      factory_id: factory?.id || null,
       region: myProfile?.region || auditor?.region || 'Unknown',
       assigned_to: selectedAuditorId,
       assigned_by: user?.id,
@@ -111,7 +125,7 @@ export default function RegionalAuditorsScreen() {
     });
 
     if (!insertError) {
-      await logActivity('factory_assigned', `Assigned ${factoryName} to ${auditor?.officer_id}`);
+      await logActivity('factory_assigned', `Assigned ${factory?.name} to ${auditor?.officer_id}`);
       setShowAssignModal(false);
       resetForm();
       fetchData();
@@ -128,8 +142,8 @@ export default function RegionalAuditorsScreen() {
 
   const resetForm = () => {
     setSelectedAuditorId('');
-    setFactoryName('');
-    setFactoryId('');
+    setSelectedFactoryId('');
+    setFactorySearch('');
     setDueDate('');
     setNotes('');
     setError('');
@@ -332,9 +346,50 @@ export default function RegionalAuditorsScreen() {
               </ScrollView>
             </View>
 
+            <View style={styles.modalField}>
+              <Text style={styles.modalLabel}>Select Factory *</Text>
+              <TextInput
+                style={[styles.modalInput, { marginBottom: 6 }]}
+                value={factorySearch}
+                onChangeText={setFactorySearch}
+                placeholderTextColor="#475569"
+                placeholder="Search factory name or ID..."
+              />
+              <ScrollView style={styles.auditorPicker} nestedScrollEnabled>
+                {AVAILABLE_FACTORIES
+                  .filter((f) => 
+                    f.name.toLowerCase().includes(factorySearch.toLowerCase()) || 
+                    f.id.toLowerCase().includes(factorySearch.toLowerCase())
+                  )
+                  .map((f) => {
+                  const existing = assignments.find(a => a.factory_id === f.id && a.status !== 'completed');
+                  const isAssigned = !!existing;
+
+                  return (
+                    <Pressable
+                      key={f.id}
+                      style={[styles.auditorPickerRow, selectedFactoryId === f.id && styles.auditorPickerRowActive, isAssigned && { opacity: 0.5 }]}
+                      onPress={() => !isAssigned && setSelectedFactoryId(f.id)}
+                      disabled={isAssigned}
+                    >
+                      <View>
+                        <Text style={[styles.auditorPickerText, selectedFactoryId === f.id && { color: '#60a5fa' }]}>
+                          {f.name} ({f.id})
+                        </Text>
+                        {isAssigned && (
+                          <Text style={{ fontSize: 10, color: '#f59e0b', marginTop: 2 }}>
+                            Currently assigned to {existing.assigned_officer_id}
+                          </Text>
+                        )}
+                      </View>
+                      {selectedFactoryId === f.id && <Feather name="check" size={14} color="#60a5fa" />}
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </View>
+
             {[
-              { label: 'Factory Name *', value: factoryName, set: setFactoryName },
-              { label: 'Factory ID (optional)', value: factoryId, set: setFactoryId },
               { label: 'Due Date (YYYY-MM-DD)', value: dueDate, set: setDueDate },
               { label: 'Notes (optional)', value: notes, set: setNotes },
             ].map((f) => (
