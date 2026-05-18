@@ -14,8 +14,8 @@ import AlertCard from '../../../components/alerts/AlertCard';
 import Skeleton from '../../../components/common/Skeleton';
 import { ErrorBoundary } from '../../../components/common/ErrorBoundary';
 
-import { getAlerts } from '../../services/api';
-import { useThemeColor } from '../../hooks/useThemeColor';
+import { getAlerts } from '../../../services/api';
+import { useThemeColor } from '../../../hooks/useThemeColor';
 
 export default function AlertsPage() {
   const theme = useThemeColor();

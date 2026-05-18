@@ -116,8 +116,12 @@ export default function UserManagementScreen() {
       return;
     }
     setActionLoading(true);
-    await supabase.from('profiles').delete().eq('id', profileId);
-    fetchOfficers();
+    const { error: delError } = await supabase.from('profiles').delete().eq('id', profileId);
+    if (delError) {
+      setError(`Delete Failed: ${delError.message}`);
+    } else {
+      fetchOfficers();
+    }
     setActionLoading(false);
   };
 
