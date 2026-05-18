@@ -36,10 +36,13 @@ export interface Alert {
   cid: string;
 }
 
+export type UserRole = 'superadmin' | 'auditor' | 'viewer';
+
 export interface User {
   id: string;
+  officerId: string;
   name: string;
-  role: string;
+  role: UserRole;
 }
 
 export interface AuthState {
