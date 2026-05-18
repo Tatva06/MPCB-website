@@ -1,135 +1,256 @@
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { supabase } from '../../../services/supabase';
+import { useAuth } from '../../../context/AuthContext';
+import { logActivity } from '../../../services/activityLog';
 
-const COMPLIANCE_DATA = [
-  { factory: 'Deepak Fertilizers', cto: 'MPCB/CTO/TLJ/2024/0041', validity: '31-Mar-2026', status: 'SHOW CAUSE', risk: 'CRITICAL', violations: 7, lastInsp: '18-Jul-2025' },
-  { factory: 'Tata Power Unit 3', cto: 'MPCB/CTO/TRM/2023/0028', validity: '30-Jun-2026', status: 'NOTICE ISSUED', risk: 'HIGH', violations: 4, lastInsp: '02-Jul-2025' },
-  { factory: 'Reliance Industries', cto: 'MPCB/CTO/NMB/2024/0055', validity: '31-Dec-2025', status: 'UNDER REVIEW', risk: 'MEDIUM', violations: 2, lastInsp: '15-Jun-2025' },
-  { factory: 'Hindalco Ltd.', cto: 'MPCB/CTO/TLJ/2023/0019', validity: '28-Feb-2026', status: 'COMPLIANT', risk: 'MEDIUM', violations: 1, lastInsp: '10-Jun-2025' },
-  { factory: 'JSW Steel Pvt.', cto: 'MPCB/CTO/VVR/2024/0037', validity: '30-Sep-2026', status: 'COMPLIANT', risk: 'LOW', violations: 0, lastInsp: '01-Jun-2025' },
-];
+export default function SubmitReportScreen() {
+  const { user } = useAuth();
+  
+  const [assignments, setAssignments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
-const STATUS_STYLES: Record<string, { bg: string; border: string; text: string }> = {
-  'SHOW CAUSE': { bg: '#fef2f2', border: '#fecaca', text: '#b91c1c' },
-  'NOTICE ISSUED': { bg: '#fff7ed', border: '#fed7aa', text: '#c2410c' },
-  'UNDER REVIEW': { bg: '#fefce8', border: '#fef08a', text: '#854d0e' },
-  'COMPLIANT': { bg: '#f0fdf4', border: '#bbf7d0', text: '#15803d' },
-};
+  const [selectedAssignmentId, setSelectedAssignmentId] = useState('');
+  const [status, setStatus] = useState('COMPLIANT');
+  const [riskLevel, setRiskLevel] = useState('LOW');
+  const [violationsCount, setViolationsCount] = useState('0');
+  const [findings, setFindings] = useState('');
 
-export default function ReportScreen() {
+  useEffect(() => {
+    fetchAssignments();
+  }, []);
+
+  const fetchAssignments = async () => {
+    if (!user) return;
+    setLoading(true);
+    
+    // Get auditor profile
+    const { data: myProfile } = await supabase.from('profiles').select('officer_id').eq('id', user.id).single();
+    
+    if (myProfile) {
+      const { data } = await supabase
+        .from('factory_assignments')
+        .select('*')
+        .eq('assigned_officer_id', myProfile.officer_id)
+        .neq('status', 'completed');
+      
+      if (data) {
+        setAssignments(data);
+      }
+    }
+    setLoading(false);
+  };
+
+  const handleSubmit = async () => {
+    if (!selectedAssignmentId) {
+      setError('Please select an assigned factory.');
+      return;
+    }
+    if (!findings.trim()) {
+      setError('Please provide inspection findings.');
+      return;
+    }
+
+    setSubmitting(true);
+    setError('');
+
+    try {
+      const assignment = assignments.find(a => a.id === selectedAssignmentId);
+      const { data: myProfile } = await supabase.from('profiles').select('officer_id, region').eq('id', user?.id).single();
+
+      // 1. Insert report
+      const { error: reportError } = await supabase.from('reports').insert({
+        factory_name: assignment.factory_name,
+        factory_id: assignment.factory_id,
+        region: myProfile?.region || assignment.region,
+        submitted_by: user?.id,
+        auditor_id: myProfile?.officer_id,
+        status,
+        risk_level: riskLevel,
+        violations_count: parseInt(violationsCount) || 0,
+        findings: findings.trim()
+      });
+
+      if (reportError) throw reportError;
+
+      // 2. Mark assignment as completed
+      const { error: updateError } = await supabase
+        .from('factory_assignments')
+        .update({ status: 'completed' })
+        .eq('id', selectedAssignmentId);
+
+      if (updateError) throw updateError;
+
+      // 3. Log activity
+      await logActivity('report_submitted', `Submitted report for ${assignment.factory_name}`);
+
+      Alert.alert('Success', 'Inspection report submitted successfully!');
+      router.replace('/(dashboard)/auditor');
+
+    } catch (err: any) {
+      console.error(err);
+      setError('Failed to submit report. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Feather name="arrow-left" size={16} color="#2563eb" />
+          <Feather name="arrow-left" size={16} color="#60a5fa" />
           <Text style={styles.backText}>Back</Text>
         </Pressable>
-        <Text style={styles.pageTitle}>Cluster Compliance Report</Text>
-        <Text style={styles.pageSub}>Taloja MIDC · As of 20 July 2025 · Auto-generated by ForensiAir</Text>
-
-        <View style={styles.kpiRow}>
-          {[
-            { label: 'Total Industries', value: '12', icon: 'home', color: '#2563eb' },
-            { label: 'Fully Compliant', value: '4', icon: 'check-circle', color: '#10b981' },
-            { label: 'Active Violations', value: '318', icon: 'alert-triangle', color: '#ef4444' },
-            { label: 'Notices Issued', value: '7', icon: 'file-text', color: '#f97316' },
-          ].map((k) => (
-            <View key={k.label} style={styles.kpiCard}>
-              <View style={[styles.kpiIcon, { backgroundColor: k.color + '20' }]}>
-                <Feather name={k.icon as any} size={16} color={k.color} />
-              </View>
-              <Text style={[styles.kpiValue, { color: k.color }]}>{k.value}</Text>
-              <Text style={styles.kpiLabel}>{k.label}</Text>
-            </View>
-          ))}
-        </View>
+        <Text style={styles.pageTitle}>Submit Inspection Report</Text>
+        <Text style={styles.pageSub}>Complete your assigned factory audits</Text>
       </View>
 
       <View style={styles.content}>
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>CTO / CTE Compliance Register</Text>
-          {COMPLIANCE_DATA.map((row, i) => (
-            <View key={i} style={styles.complianceRow}>
-              <View style={styles.complianceMain}>
-                <Text style={styles.complianceFactory}>{row.factory}</Text>
-                <Text style={styles.complianceCTO}>{row.cto}</Text>
-                <View style={styles.complianceMeta}>
-                  <Text style={styles.complianceMetaText}>Valid till: {row.validity}</Text>
-                  <Text style={styles.dot}>·</Text>
-                  <Text style={styles.complianceMetaText}>Last Insp: {row.lastInsp}</Text>
-                  <Text style={styles.dot}>·</Text>
-                  <Text style={styles.complianceMetaText}>{row.violations} violation{row.violations !== 1 ? 's' : ''}</Text>
+        {loading ? (
+          <ActivityIndicator size="large" color="#3b82f6" style={{ marginTop: 40 }} />
+        ) : assignments.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Feather name="check-circle" size={48} color="#10b981" />
+            <Text style={styles.emptyTitle}>You're all caught up!</Text>
+            <Text style={styles.emptyText}>You have no pending factory inspections assigned to you.</Text>
+          </View>
+        ) : (
+          <View style={styles.formCard}>
+            
+            {/* Select Assignment */}
+            <View style={styles.field}>
+              <Text style={styles.label}>Select Assigned Factory *</Text>
+              <ScrollView style={styles.pickerBox} nestedScrollEnabled>
+                {assignments.map(a => (
+                  <Pressable 
+                    key={a.id} 
+                    style={[styles.pickerRow, selectedAssignmentId === a.id && styles.pickerRowActive]}
+                    onPress={() => setSelectedAssignmentId(a.id)}
+                  >
+                    <View>
+                      <Text style={[styles.pickerText, selectedAssignmentId === a.id && { color: '#60a5fa' }]}>
+                        {a.factory_name} {a.factory_id ? `(${a.factory_id})` : ''}
+                      </Text>
+                      <Text style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
+                        Status: {a.status.replace('_', ' ').toUpperCase()} • Due: {a.due_date || 'None'}
+                      </Text>
+                    </View>
+                    {selectedAssignmentId === a.id && <Feather name="check" size={16} color="#60a5fa" />}
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
+
+            {/* Compliance Status */}
+            <View style={styles.field}>
+              <Text style={styles.label}>Compliance Status *</Text>
+              <View style={styles.optionsRow}>
+                {['COMPLIANT', 'UNDER REVIEW', 'NOTICE ISSUED', 'SHOW CAUSE'].map(s => (
+                  <Pressable 
+                    key={s} 
+                    style={[styles.optionBtn, status === s && styles.optionBtnActive]}
+                    onPress={() => setStatus(s)}
+                  >
+                    <Text style={[styles.optionText, status === s && { color: '#fff' }]}>{s}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+
+            {/* Risk Level & Violations */}
+            <View style={styles.rowGrid}>
+              <View style={styles.field}>
+                <Text style={styles.label}>Risk Level *</Text>
+                <View style={styles.optionsRow}>
+                  {['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map(r => (
+                    <Pressable 
+                      key={r} 
+                      style={[styles.optionBtn, riskLevel === r && styles.optionBtnActive]}
+                      onPress={() => setRiskLevel(r)}
+                    >
+                      <Text style={[styles.optionText, riskLevel === r && { color: '#fff' }]}>{r}</Text>
+                    </Pressable>
+                  ))}
                 </View>
               </View>
-              <View style={[
-                styles.statusChip,
-                { backgroundColor: STATUS_STYLES[row.status].bg, borderColor: STATUS_STYLES[row.status].border }
-              ]}>
-                <Text style={[styles.statusText, { color: STATUS_STYLES[row.status].text }]}>{row.status}</Text>
-              </View>
-            </View>
-          ))}
-        </View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Enforcement Actions Summary</Text>
-          {[
-            { action: 'Legal Notices Issued', count: 3, icon: 'mail', color: '#ef4444' },
-            { action: 'Show Cause Notices', count: 1, icon: 'alert-circle', color: '#f97316' },
-            { action: 'Temporary Closures', count: 0, icon: 'x-circle', color: '#64748b' },
-            { action: 'Compliance Achieved (after notice)', count: 2, icon: 'check-circle', color: '#10b981' },
-          ].map((a, i) => (
-            <View key={i} style={styles.enforcementRow}>
-              <View style={[styles.enforcementIcon, { backgroundColor: a.color + '18' }]}>
-                <Feather name={a.icon as any} size={14} color={a.color} />
+              <View style={styles.field}>
+                <Text style={styles.label}>Violations Count</Text>
+                <TextInput
+                  style={styles.input}
+                  keyboardType="numeric"
+                  value={violationsCount}
+                  onChangeText={setViolationsCount}
+                  placeholderTextColor="#475569"
+                />
               </View>
-              <Text style={styles.enforcementText}>{a.action}</Text>
-              <Text style={[styles.enforcementCount, { color: a.color }]}>{a.count}</Text>
             </View>
-          ))}
-        </View>
+
+            {/* Findings */}
+            <View style={styles.field}>
+              <Text style={styles.label}>Detailed Findings & Evidence *</Text>
+              <TextInput
+                style={[styles.input, { height: 120, textAlignVertical: 'top' }]}
+                multiline
+                numberOfLines={6}
+                value={findings}
+                onChangeText={setFindings}
+                placeholder="Describe inspection details, any anomalies, evidence found..."
+                placeholderTextColor="#475569"
+              />
+            </View>
+
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+            <Pressable 
+              style={[styles.submitBtn, submitting && { opacity: 0.7 }]} 
+              onPress={handleSubmit}
+              disabled={submitting}
+            >
+              {submitting ? <ActivityIndicator color="#fff" /> : (
+                <>
+                  <Feather name="upload-cloud" size={18} color="#fff" />
+                  <Text style={styles.submitBtnText}>Submit Inspection Report</Text>
+                </>
+              )}
+            </Pressable>
+          </View>
+        )}
       </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f1f5f9' },
-  header: { backgroundColor: '#0b1120', padding: 24 },
-  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 16 },
-  backText: { color: '#2563eb', fontSize: 13, fontWeight: '600' },
-  pageTitle: { fontSize: 22, fontWeight: '900', color: '#fff', marginBottom: 4 },
-  pageSub: { fontSize: 12, color: '#475569', marginBottom: 24 },
-  kpiRow: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
-  kpiCard: {
-    flex: 1, minWidth: 120, backgroundColor: 'rgba(255,255,255,0.05)',
-    borderWidth: 1, borderColor: '#1e293b', borderRadius: 12, padding: 14, alignItems: 'center', gap: 4,
-  },
-  kpiIcon: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginBottom: 4 },
-  kpiValue: { fontSize: 24, fontWeight: '900' },
-  kpiLabel: { fontSize: 10, color: '#475569', textAlign: 'center', fontWeight: '500' },
-  content: { padding: 20, gap: 16 },
-  card: { backgroundColor: '#fff', borderRadius: 16, borderWidth: 1, borderColor: '#e2e8f0', padding: 20 },
-  cardTitle: { fontSize: 15, fontWeight: '800', color: '#0f172a', marginBottom: 16 },
-  complianceRow: {
-    flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between',
-    paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#f1f5f9', gap: 10,
-  },
-  complianceMain: { flex: 1 },
-  complianceFactory: { fontSize: 14, fontWeight: '700', color: '#0f172a', marginBottom: 3 },
-  complianceCTO: { fontSize: 10, color: '#94a3b8', fontFamily: 'monospace', marginBottom: 4 },
-  complianceMeta: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4 },
-  complianceMetaText: { fontSize: 10, color: '#64748b' },
-  dot: { fontSize: 10, color: '#cbd5e1' },
-  statusChip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
-  statusText: { fontSize: 10, fontWeight: '800' },
-  enforcementRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f8fafc',
-  },
-  enforcementIcon: { width: 34, height: 34, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
-  enforcementText: { flex: 1, fontSize: 13, color: '#475569', fontWeight: '500' },
-  enforcementCount: { fontSize: 20, fontWeight: '900' },
+  container: { flex: 1, backgroundColor: '#0f172a' },
+  header: { backgroundColor: '#1e293b', padding: 30, paddingBottom: 40 },
+  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 20 },
+  backText: { color: '#60a5fa', fontSize: 14, fontWeight: '700' },
+  pageTitle: { fontSize: 28, fontWeight: '900', color: '#f1f5f9' },
+  pageSub: { fontSize: 14, color: '#94a3b8', marginTop: 6 },
+  content: { padding: 20, marginTop: -20, maxWidth: 800, alignSelf: 'center', width: '100%' },
+  emptyState: { backgroundColor: '#1e293b', padding: 60, borderRadius: 16, alignItems: 'center', borderWidth: 1, borderColor: '#334155', gap: 16 },
+  emptyTitle: { color: '#f1f5f9', fontSize: 24, fontWeight: '800' },
+  emptyText: { color: '#94a3b8', fontSize: 15, textAlign: 'center', lineHeight: 22 },
+  formCard: { backgroundColor: '#1e293b', padding: 24, borderRadius: 16, borderWidth: 1, borderColor: '#334155', gap: 24 },
+  field: { gap: 8, flex: 1 },
+  label: { color: '#cbd5e1', fontSize: 13, fontWeight: '700' },
+  input: { backgroundColor: '#0f172a', borderWidth: 1, borderColor: '#334155', borderRadius: 8, color: '#f1f5f9', padding: 14, fontSize: 15 },
+  pickerBox: { backgroundColor: '#0f172a', borderWidth: 1, borderColor: '#334155', borderRadius: 8, maxHeight: 180 },
+  pickerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#1e293b' },
+  pickerRowActive: { backgroundColor: 'rgba(59,130,246,0.1)' },
+  pickerText: { color: '#94a3b8', fontSize: 15, fontWeight: '600' },
+  optionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  optionBtn: { backgroundColor: '#0f172a', borderWidth: 1, borderColor: '#334155', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8 },
+  optionBtnActive: { backgroundColor: '#3b82f6', borderColor: '#2563eb' },
+  optionText: { color: '#94a3b8', fontSize: 12, fontWeight: '800' },
+  rowGrid: { flexDirection: 'row', gap: 16, flexWrap: 'wrap' },
+  errorText: { color: '#ef4444', fontSize: 14, fontWeight: '500' },
+  submitBtn: { backgroundColor: '#10b981', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', padding: 18, borderRadius: 10, gap: 10, marginTop: 10 },
+  submitBtnText: { color: '#fff', fontSize: 16, fontWeight: '800' },
 });
