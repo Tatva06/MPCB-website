@@ -8,6 +8,7 @@ import { supabase } from '../../../services/supabase';
 import { useAuth } from '../../../context/AuthContext';
 import { router } from 'expo-router';
 import { logActivity } from '../../../services/activityLog';
+import { mockLeaderboard } from '../../../services/mockData';
 
 interface AuditorProfile {
   id: string;
@@ -34,18 +35,7 @@ const STATUS_COLORS = {
   completed: { bg: 'rgba(16,185,129,0.15)', border: 'rgba(16,185,129,0.4)', text: '#34d399' },
 };
 
-const AVAILABLE_FACTORIES = [
-  { id: 'FAC-001', name: 'Deepak Fertilizers' },
-  { id: 'FAC-002', name: 'IG Petrochemicals' },
-  { id: 'FAC-003', name: 'Aarti Industries' },
-  { id: 'FAC-004', name: 'Taloja Copper' },
-  { id: 'FAC-005', name: 'Reliance Industries' },
-  { id: 'FAC-006', name: 'Tata Steel' },
-  { id: 'FAC-007', name: 'Hindalco Industries' },
-  { id: 'FAC-008', name: 'JSW Steel' },
-  { id: 'FAC-009', name: 'Mahindra & Mahindra' },
-  { id: 'FAC-010', name: 'Larsen & Toubro' },
-];
+const AVAILABLE_FACTORIES = mockLeaderboard;
 
 export default function RegionalAuditorsScreen() {
   const { user } = useAuth();

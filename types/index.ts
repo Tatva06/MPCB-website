@@ -1,4 +1,5 @@
 export interface FactoryLeaderboard {
+  id: string;
   name: string;
   score: number;
   color: string;

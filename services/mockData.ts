@@ -81,11 +81,26 @@ export const mockDashboardMetrics: MetricData[] = [
 ];
 
 export const mockLeaderboard: FactoryLeaderboard[] = [
-  { name: 'Deepak Fertilizers', score: 98, color: '#ef4444' },
-  { name: 'Tata Power', score: 82, color: '#ef4444' },
-  { name: 'Reliance Ind.', score: 65, color: '#f97316' },
-  { name: 'Hindalco', score: 55, color: '#f97316' },
-  { name: 'JSW Steel', score: 12, color: '#10b981' },
+  { id: 'FAC-001', name: 'Deepak Fertilizers', score: 98, color: '#ef4444' },
+  { id: 'FAC-002', name: 'Tata Power', score: 82, color: '#ef4444' },
+  { id: 'FAC-003', name: 'Reliance Ind.', score: 65, color: '#f97316' },
+  { id: 'FAC-004', name: 'Hindalco', score: 55, color: '#f97316' },
+  { id: 'FAC-005', name: 'JSW Steel', score: 48, color: '#f97316' },
+  { id: 'FAC-006', name: 'Larsen & Toubro', score: 42, color: '#f59e0b' },
+  { id: 'FAC-007', name: 'Mahindra & Mahindra', score: 38, color: '#f59e0b' },
+  { id: 'FAC-008', name: 'Aarti Industries', score: 35, color: '#f59e0b' },
+  { id: 'FAC-009', name: 'IG Petrochemicals', score: 29, color: '#eab308' },
+  { id: 'FAC-010', name: 'Taloja Copper', score: 24, color: '#eab308' },
+  { id: 'FAC-011', name: 'Pidilite Industries', score: 18, color: '#10b981' },
+  { id: 'FAC-012', name: 'Godrej Agrovet', score: 15, color: '#10b981' },
+  { id: 'FAC-013', name: 'Cipla Ltd', score: 12, color: '#10b981' },
+  { id: 'FAC-014', name: 'Sun Pharma', score: 10, color: '#10b981' },
+  { id: 'FAC-015', name: 'Asian Paints', score: 8, color: '#10b981' },
+  { id: 'FAC-016', name: 'Castrol India', score: 6, color: '#10b981' },
+  { id: 'FAC-017', name: 'Voltas Ltd', score: 4, color: '#10b981' },
+  { id: 'FAC-018', name: 'Exide Industries', score: 2, color: '#10b981' },
+  { id: 'FAC-019', name: 'Bharat Forge', score: 1, color: '#10b981' },
+  { id: 'FAC-020', name: 'Thermax Ltd', score: 0, color: '#10b981' },
 ];
 
 export const mockFingerprints: Fingerprint[] = [
