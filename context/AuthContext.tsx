@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, AuthState, UserRole } from '../types';
 import { supabase } from '../services/supabase';
+import { logActivity } from '../services/activityLog';
 
 interface AuthContextType extends AuthState {
   login: (officerId: string, authorizationKey: string) => Promise<void>;
@@ -65,6 +66,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         name: profile.full_name || profile.officer_id,
         role: profile.role as UserRole,
       });
+
+      // Log login event (after user is set)
+      await logActivity('login', `Logged in as ${profile.role}`);
     } catch (err: any) {
       setError(err.message || 'Authentication failed. Please check your credentials.');
       throw err;
@@ -74,6 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
+    await logActivity('logout', 'Session ended');
     await supabase.auth.signOut();
     setUser(null);
   };
