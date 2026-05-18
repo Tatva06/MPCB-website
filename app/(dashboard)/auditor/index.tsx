@@ -141,22 +141,20 @@ export default function ComprehensiveDashboard() {
                 ))}
               </View>
             </View>
-            <Text style={[styles.chartSubText, { color: theme.textSecondary }]}>
-              Orange line indicates legal emission limit (100 ppm)
-            </Text>
+            <Text style={[styles.chartSubText, { color: theme.textSecondary }]}>Historical telemetry mapping for selected node</Text>
             <ErrorBoundary>
               {isChartsLoading ? <Skeleton height={220} /> : (
-                <ResponsiveChartContainer minWidth={280}>
-                  {(chartWidth) => (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <View style={{ minWidth: 800 }}>
                     <LineChart
                       data={chartsData!.timeline}
-                      width={chartWidth}
+                      width={800}
                       height={220}
                       chartConfig={{
                         backgroundColor: theme.surface,
                         backgroundGradientFrom: theme.surface,
                         backgroundGradientTo: theme.surface,
-                        color: (opacity = 1) => `rgba(100, 116, 139, ${opacity})`, // Secondary line color
+                        color: (opacity = 1) => `rgba(100, 116, 139, ${opacity})`,
                         labelColor: (opacity = 1) => `rgba(100, 116, 139, ${opacity})`,
                         strokeWidth: 2,
                         propsForBackgroundLines: { strokeDasharray: '', stroke: theme.border },
@@ -165,8 +163,8 @@ export default function ComprehensiveDashboard() {
                       bezier
                       style={styles.chartOffset}
                     />
-                  )}
-                </ResponsiveChartContainer>
+                  </View>
+                </ScrollView>
               )}
             </ErrorBoundary>
           </FadeInView>

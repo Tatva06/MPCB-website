@@ -87,15 +87,15 @@ export default function RegionalOverviewScreen() {
             <Text style={[styles.chartSubText, { color: theme.textSecondary }]}>Aggregate anomalies across all 152 nodes in Navi Mumbai</Text>
             <ErrorBoundary>
               {isChartsLoading ? <Skeleton height={220} /> : (
-                <ResponsiveChartContainer minWidth={280}>
-                  {(chartWidth) => (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <View style={{ minWidth: 800 }}>
                     <LineChart
-                      data={chartsData!.timeline} width={chartWidth} height={220}
+                      data={chartsData!.timeline} width={800} height={220}
                       chartConfig={{ backgroundColor: theme.surface, backgroundGradientFrom: theme.surface, backgroundGradientTo: theme.surface, color: (opacity = 1) => `rgba(100, 116, 139, ${opacity})`, strokeWidth: 2, propsForBackgroundLines: { strokeDasharray: '', stroke: theme.border } }}
                       withDots={false} bezier style={styles.chartOffset}
                     />
-                  )}
-                </ResponsiveChartContainer>
+                  </View>
+                </ScrollView>
               )}
             </ErrorBoundary>
           </FadeInView>

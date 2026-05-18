@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   Pressable,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -46,10 +47,10 @@ export default function DashboardLayout() {
 
     if (user.role === 'superadmin') {
       return {
-        monitoring: [
-          { label: 'Global Overview', icon: 'globe', path: '/(dashboard)/admin' },
-        ],
+        monitoring: [{ label: 'Global Overview', icon: 'globe', path: '/(dashboard)/admin' }],
         actions: [],
+        analysis: [],
+        data: [],
         management: [
           { label: 'User Management', icon: 'users', path: '/(dashboard)/admin/users' },
           { label: 'All Reports', icon: 'clipboard', path: '/(dashboard)/admin/reports' },
@@ -62,11 +63,23 @@ export default function DashboardLayout() {
     if (user.role === 'regional_manager') {
       return {
         monitoring: [
-          { label: 'Region Overview', icon: 'map', path: '/(dashboard)/regional' },
+          { label: 'Tamper Alerts', icon: 'alert-triangle', path: '/(dashboard)/regional' },
+          { label: 'Suspicious Units', icon: 'eye', path: '/(dashboard)/regional/suspicious-units' },
+          { label: 'Compliant Units', icon: 'check-circle', path: '/(dashboard)/regional/compliant-units' },
         ],
         actions: [],
+        analysis: [
+          { label: 'Fingerprint Lab', icon: 'search', path: '/(dashboard)/regional/fingerprint-lab' },
+          { label: 'Inspection Overlay', icon: 'layers', path: '/(dashboard)/regional/inspection-overlay' },
+          { label: 'Cross-factory Sync', icon: 'refresh-cw', path: '/(dashboard)/regional/cross-factory-sync' },
+        ],
+        data: [
+          { label: 'MPCB Feed', icon: 'database', path: '/(dashboard)/regional/mpcb-feed' },
+          { label: 'Satellite Audit', icon: 'map', path: '/(dashboard)/regional/satellite-audit' },
+          { label: 'Evidence Export', icon: 'download-cloud', path: '/(dashboard)/regional/evidence-export' },
+        ],
         management: [
-          { label: 'My Auditors', icon: 'users', path: '/(dashboard)/regional/auditors' },
+          { label: 'Assign Auditors', icon: 'users', path: '/(dashboard)/regional/auditors' },
           { label: 'Region Reports', icon: 'clipboard', path: '/(dashboard)/admin/reports' },
         ],
       };
@@ -81,6 +94,8 @@ export default function DashboardLayout() {
       actions: [
         { label: 'Submit Report', icon: 'file-text', path: '/(dashboard)/auditor/report' },
       ],
+      analysis: [],
+      data: [],
       management: [],
     };
   };
@@ -113,15 +128,15 @@ export default function DashboardLayout() {
     }
   };
 
-  const NavButton = ({ item }: { item: { label: string; icon: string; path: string } }) => {
+  const NavButton = ({ item }: { item: any }) => {
     const active = isActive(item.path);
     return (
       <Pressable
+        style={[styles.navItem, active && { backgroundColor: 'rgba(59,130,246,0.1)' }]}
         onPress={() => router.push(item.path as any)}
-        style={[styles.navItem, active && styles.navItemActive]}
       >
-        <Feather name={item.icon as any} size={18} color={active ? '#60a5fa' : '#94a3b8'} />
-        <Text style={[styles.navText, active && styles.navTextActive]}>{item.label}</Text>
+        <Feather name={item.icon as any} size={20} color={active ? '#60a5fa' : '#64748b'} />
+        <Text style={[styles.navText, active && { color: '#f1f5f9', fontWeight: '700' }]}>{item.label}</Text>
       </Pressable>
     );
   };
@@ -133,7 +148,8 @@ export default function DashboardLayout() {
         {/* ── DESKTOP SIDEBAR ── */}
         {!isMobile && (
           <View style={styles.sidebar}>
-            {/* Brand */}
+            
+            {/* Brand Logo */}
             <View style={styles.brandContainer}>
               <Feather name="shield" size={28} color="#3b82f6" />
               <Text style={styles.brandTitle}>ForensiAir</Text>
@@ -145,29 +161,45 @@ export default function DashboardLayout() {
               <Text style={[styles.roleText, { color: roleColor }]}>{roleLabel}</Text>
             </View>
 
-            {/* SECTION 1: MONITORING */}
-            <View style={styles.navSection}>
-              <Text style={styles.navHeader}>REAL-TIME MONITORING</Text>
-              {navItems.monitoring.map((item) => <NavButton key={item.path} item={item} />)}
-            </View>
-
-            {/* SECTION 2: ACTIONS */}
-            {navItems.actions.length > 0 && (
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {/* SECTION 1: MONITORING */}
               <View style={styles.navSection}>
-                <Text style={styles.navHeader}>REGULATORY ACTIONS</Text>
-                {navItems.actions.map((item) => <NavButton key={item.path} item={item} />)}
+                <Text style={styles.navHeader}>MONITORING</Text>
+                {navItems.monitoring.map((item) => <NavButton key={item.path} item={item} />)}
               </View>
-            )}
 
-            {/* SECTION 3: MANAGEMENT (superadmin / regional_manager only) */}
-            {navItems.management.length > 0 && (
-              <View style={styles.navSection}>
-                <Text style={styles.navHeader}>MANAGEMENT</Text>
-                {navItems.management.map((item) => <NavButton key={item.path} item={item} />)}
-              </View>
-            )}
+              {/* SECTION 2: ACTIONS */}
+              {navItems.actions.length > 0 && (
+                <View style={styles.navSection}>
+                  <Text style={styles.navHeader}>ACTIONS</Text>
+                  {navItems.actions.map((item) => <NavButton key={item.path} item={item} />)}
+                </View>
+              )}
 
-            <View style={{ flex: 1 }} />
+              {/* SECTION: ANALYSIS */}
+              {navItems.analysis.length > 0 && (
+                <View style={styles.navSection}>
+                  <Text style={styles.navHeader}>ANALYSIS</Text>
+                  {navItems.analysis.map((item) => <NavButton key={item.path} item={item} />)}
+                </View>
+              )}
+
+              {/* SECTION: DATA */}
+              {navItems.data.length > 0 && (
+                <View style={styles.navSection}>
+                  <Text style={styles.navHeader}>DATA</Text>
+                  {navItems.data.map((item) => <NavButton key={item.path} item={item} />)}
+                </View>
+              )}
+
+              {/* SECTION 3: MANAGEMENT */}
+              {navItems.management.length > 0 && (
+                <View style={styles.navSection}>
+                  <Text style={styles.navHeader}>MANAGEMENT</Text>
+                  {navItems.management.map((item) => <NavButton key={item.path} item={item} />)}
+                </View>
+              )}
+            </ScrollView>
 
             {/* User Profile */}
             <View style={styles.profileBox}>

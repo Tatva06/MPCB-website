@@ -71,13 +71,8 @@ export default function RegionalAuditorsScreen() {
   const fetchData = async () => {
     setLoading(true);
 
-    // Fetch auditors (superadmin sees all, RM sees their region)
+    // Fetch auditors
     const auditorsQuery = supabase.from('profiles').select('id, officer_id, full_name, region').eq('role', 'auditor');
-    if (user?.role === 'regional_manager') {
-      // Get current user's region first
-      const { data: myProfile } = await supabase.from('profiles').select('region').eq('id', user.id).single();
-      if (myProfile?.region) auditorsQuery.eq('region', myProfile.region);
-    }
     const { data: auditorsData } = await auditorsQuery.order('full_name');
     if (auditorsData) setAuditors(auditorsData as AuditorProfile[]);
 

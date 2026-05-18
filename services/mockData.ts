@@ -120,15 +120,15 @@ export const mockShapData: ShapData[] = [
 ];
 
 export const mockTimelineData = {
-  labels: ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00'],
+  labels: ['Apr 10', 'Apr 11', 'Apr 12', 'Apr 13', 'Apr 14', 'Apr 15', 'Apr 16', 'Apr 17', 'Apr 18', 'Apr 19'],
   datasets: [
-    { data: [140, 140, 140, 40, 50, 190], color: () => '#3b82f6', strokeWidth: 3 },
-    { data: [100, 100, 100, 100, 100, 100], color: () => 'rgba(249, 115, 22, 0.6)', strokeWidth: 2 },
+    { data: [420, 435, 410, 450, 450, 450, 450, 255, 270, 430], color: () => '#3b82f6', strokeWidth: 3 },
+    { data: [150, 150, 150, 150, 150, 150, 150, 150, 150, 150], color: () => 'rgba(249, 115, 22, 0.6)', strokeWidth: 2 },
   ],
 };
 
 export const mockCalendarData = {
-  labels: ['Day 1', 'Day 15', 'Day 30', 'Day 45', 'Day 60', 'Day 75', 'Day 90'],
+  labels: ['Apr 1', 'Apr 5', 'Apr 10', 'Apr 15', 'Apr 20', 'Apr 25', 'Apr 30'],
   datasets: [{ data: [80, 85, 20, 90, 88, 18, 85], color: () => '#3b82f6', strokeWidth: 2 }],
 };
 
