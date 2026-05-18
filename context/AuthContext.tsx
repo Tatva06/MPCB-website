@@ -22,7 +22,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .eq('id', userId)
       .single();
 
-    if (profileError || !data) return null;
+    if (profileError) {
+      throw new Error(`DB Error [${profileError.code}]: ${profileError.message}`);
+    }
+    if (!data) {
+      throw new Error('Profile row missing — run create_officer_profile() in Supabase SQL Editor');
+    }
     return data;
   };
 
