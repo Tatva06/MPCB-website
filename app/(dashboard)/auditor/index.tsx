@@ -20,6 +20,8 @@ import { ErrorBoundary } from '../../components/common/ErrorBoundary';
 
 import { getChartsData, getDashboardMetrics, getFingerprints, getLeaderboard, getShapData } from '../../services/api';
 import { useThemeColor } from '../../hooks/useThemeColor';
+import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../services/supabase';
 
 export default function ComprehensiveDashboard() {
   const { width } = useWindowDimensions();
@@ -29,10 +31,39 @@ export default function ComprehensiveDashboard() {
   const [activeParam, setActiveParam] = useState('SO2');
 
   const { data: metrics, isLoading: isMetricsLoading } = useQuery({ queryKey: ['metrics'], queryFn: getDashboardMetrics });
-  const { data: leaderboard, isLoading: isLeaderboardLoading } = useQuery({ queryKey: ['leaderboard'], queryFn: getLeaderboard });
+  const { data: allLeaderboard, isLoading: isLeaderboardLoading } = useQuery({ queryKey: ['leaderboard'], queryFn: getLeaderboard });
   const { data: fingerprints, isLoading: isFpLoading } = useQuery({ queryKey: ['fingerprints'], queryFn: getFingerprints });
   const { data: shapData, isLoading: isShapLoading } = useQuery({ queryKey: ['shap'], queryFn: getShapData });
   const { data: chartsData, isLoading: isChartsLoading } = useQuery({ queryKey: ['charts'], queryFn: getChartsData });
+
+  // Fetch auditor assignments
+  const { user } = useAuth();
+  const { data: assignments, isLoading: isAssignmentsLoading } = useQuery({
+    queryKey: ['my_assignments', user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('factory_assignments')
+        .select('*')
+        .eq('assigned_by', user?.id) // Wait, assigned_by is who assigned it. We need assigned_to or assigned_officer_id
+        // Actually, let's fetch based on the auditor's officer_id which is in user profile
+        // Wait, user context might not have officer_id directly in all cases, let's fetch by assigned_to (auth.uid)
+        // Let's correct this inside the queryFn
+      const { data: myProfile } = await supabase.from('profiles').select('officer_id').eq('id', user?.id).single();
+      const { data: myAssignments } = await supabase
+        .from('factory_assignments')
+        .select('factory_id, factory_name')
+        .eq('assigned_officer_id', myProfile?.officer_id)
+        .neq('status', 'completed');
+      return myAssignments || [];
+    },
+    enabled: !!user,
+  });
+
+  const assignedFactoryIds = assignments?.map(a => a.factory_id) || [];
+  
+  // Filter leaderboard to only show assigned factories
+  const leaderboard = allLeaderboard?.filter(f => assignedFactoryIds.includes(f.id));
+  const assignedCount = leaderboard?.length || 0;
 
   const renderSkeletonList = (count: number, height: number) => (
     <View style={{ gap: 16 }}>
@@ -50,18 +81,12 @@ export default function ComprehensiveDashboard() {
         <FadeInView delay={100} translateY={-10}>
           <View style={styles.headerRow}>
             <View>
-              <Text style={[styles.pageTitle, { color: theme.text }]}>Taloja MIDC Cluster</Text>
-              <Text style={[styles.pageSub, { color: theme.textSecondary }]}>12 Units Monitored • Last Sync: 2 mins ago</Text>
+              <Text style={[styles.pageTitle, { color: theme.text }]}>My Assigned Factories</Text>
+              <Text style={[styles.pageSub, { color: theme.textSecondary }]}>{assignedCount} Units Monitored • Live Data Sync Active</Text>
             </View>
             <View style={styles.badgeRow}>
               <View style={[styles.badge, { backgroundColor: theme.dangerBg, borderColor: theme.dangerBorder }]}>
-                <Text style={[styles.badgeTextRed, { color: theme.danger }]}>3 HIGH-RISK</Text>
-              </View>
-              <View style={[styles.badge, { backgroundColor: theme.warningBg, borderColor: theme.warningBorder }]}>
-                <Text style={[styles.badgeTextAmber, { color: theme.warning }]}>5 SUSPICIOUS</Text>
-              </View>
-              <View style={[styles.badge, { backgroundColor: theme.successBg, borderColor: theme.successBorder }]}>
-                <Text style={[styles.badgeTextGreen, { color: theme.success }]}>4 CLEAN</Text>
+                <Text style={[styles.badgeTextRed, { color: theme.danger }]}>ACTION REQUIRED</Text>
               </View>
             </View>
           </View>
