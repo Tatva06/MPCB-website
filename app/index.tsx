@@ -27,11 +27,18 @@ export default function LoginScreen() {
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
 
-  const { login, isLoading, error } = useAuth();
+  const { login, isLoading, error, user } = useAuth();
   const [officerId, setOfficerId] = useState('');
   const [password, setPassword] = useState('');
   const [localError, setLocalError] = useState('');
   
+  // If already logged in, skip login screen
+  useEffect(() => {
+    if (user) {
+      redirectByRole(user.role);
+    }
+  }, [user]);
+
   const [idFocused, setIdFocused] = useState(false);
   const [pwFocused, setPwFocused] = useState(false);
   const [tickerIdx, setTickerIdx] = useState(0);
@@ -97,6 +104,16 @@ export default function LoginScreen() {
     return null;
   };
 
+  const redirectByRole = (role: string) => {
+    if (role === 'superadmin') {
+      router.replace('/(dashboard)/admin/users' as any);
+    } else if (role === 'regional_manager') {
+      router.replace('/(dashboard)/regional/auditors' as any);
+    } else {
+      router.replace('/(dashboard)');
+    }
+  };
+
   const handleLogin = async () => {
     const validationError = validateInputs();
     if (validationError) {
@@ -107,7 +124,7 @@ export default function LoginScreen() {
     setLocalError('');
     try {
       await login(officerId.trim(), password);
-      router.replace('/(dashboard)');
+      // user state updates via AuthContext — useEffect above handles redirect
     } catch (err) {
       // Error handled by AuthContext
     }

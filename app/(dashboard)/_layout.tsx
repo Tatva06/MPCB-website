@@ -23,7 +23,6 @@ export default function DashboardLayout() {
     if (isLoading) return;
     if (!user) {
       router.replace('/');
-      return;
     }
   }, [user, isLoading]);
 

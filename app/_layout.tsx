@@ -16,6 +16,8 @@ export default function RootLayout() {
           <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
             <Stack.Screen name="index" />
             <Stack.Screen name="(dashboard)" />
+            <Stack.Screen name="forgot-credentials" />
+            <Stack.Screen name="blocked" />
             <Stack.Screen name="modal" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
           </Stack>
         </AuthProvider>
