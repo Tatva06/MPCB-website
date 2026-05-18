@@ -1,7 +1,8 @@
 import { Feather } from '@expo/vector-icons';
 import { Slot, router, usePathname } from 'expo-router';
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
+  ActivityIndicator,
   Pressable,
   SafeAreaView,
   StyleSheet,
@@ -9,14 +10,114 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
+import { useAuth } from '../../context/AuthContext';
 
 export default function DashboardLayout() {
   const pathname = usePathname();
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
+  const { user, isLoading, logout } = useAuth();
 
-  // FIX: use exact route paths that expo-router resolves correctly
+  // Role-based redirect gate
+  useEffect(() => {
+    if (isLoading) return;
+    if (!user) {
+      router.replace('/');
+      return;
+    }
+  }, [user, isLoading]);
+
+  if (isLoading || !user) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#3b82f6" />
+        <Text style={styles.loadingText}>Verifying credentials...</Text>
+      </View>
+    );
+  }
+
   const isActive = (path: string) => pathname === path;
+
+  // Role-based nav items
+  const getNavItems = () => {
+    const common = [
+      { label: 'Live Telemetry', icon: 'activity', path: '/(dashboard)' },
+      { label: 'Tamper Alerts', icon: 'alert-triangle', path: '/(dashboard)/alerts' },
+    ];
+
+    if (user.role === 'superadmin') {
+      return {
+        monitoring: common,
+        actions: [
+          { label: 'Compliance Report', icon: 'file-text', path: '/(dashboard)/report' },
+          { label: 'Generate Legal Notice', icon: 'download', path: '/modal' },
+        ],
+        management: [
+          { label: 'User Management', icon: 'users', path: '/(dashboard)/admin/users' },
+          { label: 'All Reports', icon: 'clipboard', path: '/(dashboard)/admin/reports' },
+          { label: 'System Settings', icon: 'settings', path: '/(dashboard)/admin/settings' },
+        ],
+      };
+    }
+
+    if (user.role === 'regional_manager') {
+      return {
+        monitoring: common,
+        actions: [
+          { label: 'Compliance Report', icon: 'file-text', path: '/(dashboard)/report' },
+          { label: 'Generate Legal Notice', icon: 'download', path: '/modal' },
+        ],
+        management: [
+          { label: 'My Auditors', icon: 'users', path: '/(dashboard)/regional/auditors' },
+          { label: 'Pending Inspections', icon: 'clock', path: '/(dashboard)/regional/inspections' },
+        ],
+      };
+    }
+
+    // auditor
+    return {
+      monitoring: [
+        { label: 'My Factories', icon: 'activity', path: '/(dashboard)' },
+        { label: 'My Alerts', icon: 'alert-triangle', path: '/(dashboard)/alerts' },
+      ],
+      actions: [
+        { label: 'Submit Report', icon: 'file-text', path: '/(dashboard)/report' },
+      ],
+      management: [],
+    };
+  };
+
+  const navItems = getNavItems();
+
+  const roleLabel = {
+    superadmin: 'Super Admin',
+    regional_manager: 'Regional Manager',
+    auditor: 'Auditor',
+  }[user.role];
+
+  const roleColor = {
+    superadmin: '#f59e0b',
+    regional_manager: '#8b5cf6',
+    auditor: '#3b82f6',
+  }[user.role];
+
+  const handleLogout = async () => {
+    await logout();
+    router.replace('/');
+  };
+
+  const NavButton = ({ item }: { item: { label: string; icon: string; path: string } }) => {
+    const active = isActive(item.path);
+    return (
+      <Pressable
+        onPress={() => router.push(item.path as any)}
+        style={[styles.navItem, active && styles.navItemActive]}
+      >
+        <Feather name={item.icon as any} size={18} color={active ? '#60a5fa' : '#94a3b8'} />
+        <Text style={[styles.navText, active && styles.navTextActive]}>{item.label}</Text>
+      </Pressable>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -25,82 +126,55 @@ export default function DashboardLayout() {
         {/* ── DESKTOP SIDEBAR ── */}
         {!isMobile && (
           <View style={styles.sidebar}>
+            {/* Brand */}
             <View style={styles.brandContainer}>
               <Feather name="shield" size={28} color="#3b82f6" />
               <Text style={styles.brandTitle}>ForensiAir</Text>
             </View>
 
-            {/* SECTION 1: REAL-TIME MONITORING */}
+            {/* Role Badge */}
+            <View style={[styles.roleBadge, { backgroundColor: `${roleColor}18`, borderColor: `${roleColor}40` }]}>
+              <View style={[styles.roleDot, { backgroundColor: roleColor }]} />
+              <Text style={[styles.roleText, { color: roleColor }]}>{roleLabel}</Text>
+            </View>
+
+            {/* SECTION 1: MONITORING */}
             <View style={styles.navSection}>
               <Text style={styles.navHeader}>REAL-TIME MONITORING</Text>
-
-              {/* FIX: explicitly route to /(dashboard) to avoid collision with root login */}
-              <Pressable
-                onPress={() => router.push('/(dashboard)')}
-                style={[styles.navItem, isActive('/') && styles.navItemActive]}
-              >
-                <Feather name="activity" size={18} color={isActive('/') ? '#60a5fa' : '#94a3b8'} />
-                <Text style={[styles.navText, isActive('/') && styles.navTextActive]}>Live Telemetry</Text>
-              </Pressable>
-
-              <Pressable
-                onPress={() => router.push('/(dashboard)/alerts')}
-                style={[styles.navItem, isActive('/alerts') && styles.navItemActive]}
-              >
-                <Feather name="alert-triangle" size={18} color={isActive('/alerts') ? '#60a5fa' : '#94a3b8'} />
-                <Text style={[styles.navText, isActive('/alerts') && styles.navTextActive]}>Tamper Alerts</Text>
-              </Pressable>
-
-              <Pressable style={styles.navItem}>
-                <Feather name="wind" size={18} color="#94a3b8" />
-                <Text style={styles.navText}>Air Quality (CEMS)</Text>
-              </Pressable>
-
-              <Pressable style={styles.navItem}>
-                <Feather name="droplet" size={18} color="#94a3b8" />
-                <Text style={styles.navText}>Effluent (ETP)</Text>
-              </Pressable>
+              {navItems.monitoring.map((item) => <NavButton key={item.path} item={item} />)}
             </View>
 
-            {/* SECTION 2: REGULATORY ACTIONS */}
-            <View style={styles.navSection}>
-              <Text style={styles.navHeader}>REGULATORY ACTIONS</Text>
+            {/* SECTION 2: ACTIONS */}
+            {navItems.actions.length > 0 && (
+              <View style={styles.navSection}>
+                <Text style={styles.navHeader}>REGULATORY ACTIONS</Text>
+                {navItems.actions.map((item) => <NavButton key={item.path} item={item} />)}
+              </View>
+            )}
 
-              {/* FIX: Added report route */}
-              <Pressable
-                onPress={() => router.push('/(dashboard)/report')}
-                style={[styles.navItem, isActive('/report') && styles.navItemActive]}
-              >
-                <Feather name="file-text" size={18} color={isActive('/report') ? '#60a5fa' : '#94a3b8'} />
-                <Text style={[styles.navText, isActive('/report') && styles.navTextActive]}>
-                  Compliance Report
-                </Text>
-              </Pressable>
-
-              <Pressable
-                onPress={() => router.push('/modal')}
-                style={styles.navItem}
-              >
-                <Feather name="download" size={18} color="#94a3b8" />
-                <Text style={styles.navText}>Generate Legal Notice</Text>
-              </Pressable>
-            </View>
+            {/* SECTION 3: MANAGEMENT (superadmin / regional_manager only) */}
+            {navItems.management.length > 0 && (
+              <View style={styles.navSection}>
+                <Text style={styles.navHeader}>MANAGEMENT</Text>
+                {navItems.management.map((item) => <NavButton key={item.path} item={item} />)}
+              </View>
+            )}
 
             <View style={{ flex: 1 }} />
 
             {/* User Profile */}
             <View style={styles.profileBox}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>T</Text>
+              <View style={[styles.avatar, { backgroundColor: roleColor }]}>
+                <Text style={styles.avatarText}>{user.name.charAt(0).toUpperCase()}</Text>
               </View>
-              <View>
-                <Text style={styles.profileName}>Tatva</Text>
-                <Text style={styles.profileRole}>Chief Auditor</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.profileName} numberOfLines={1}>{user.name}</Text>
+                <Text style={styles.profileOfficerId}>{user.officerId}</Text>
               </View>
             </View>
 
             {/* Logout */}
-            <Pressable style={styles.logoutBtn} onPress={() => router.replace('/')}>
+            <Pressable style={styles.logoutBtn} onPress={handleLogout}>
               <Feather name="log-out" size={18} color="#ef4444" />
               <Text style={styles.logoutText}>Secure Logout</Text>
             </Pressable>
@@ -115,35 +189,22 @@ export default function DashboardLayout() {
         {/* ── MOBILE BOTTOM NAVIGATION ── */}
         {isMobile && (
           <View style={styles.bottomNav}>
-            <Pressable
-              onPress={() => router.push('/(dashboard)')}
-              style={styles.mobileNavItem}
-            >
-              <Feather name="activity" size={24} color={isActive('/') ? '#60a5fa' : '#94a3b8'} />
-            </Pressable>
-
-            <Pressable
-              onPress={() => router.push('/(dashboard)/alerts')}
-              style={styles.mobileNavItem}
-            >
-              <Feather name="alert-triangle" size={24} color={isActive('/alerts') ? '#60a5fa' : '#94a3b8'} />
-            </Pressable>
-
-            <Pressable
-              onPress={() => router.push('/(dashboard)/report')}
-              style={styles.mobileNavItem}
-            >
-              <Feather name="file-text" size={24} color={isActive('/report') ? '#60a5fa' : '#94a3b8'} />
-            </Pressable>
-
-            <Pressable
-              onPress={() => router.push('/modal')}
-              style={styles.mobileNavItem}
-            >
-              <Feather name="download" size={24} color="#94a3b8" />
-            </Pressable>
-
-            <Pressable style={styles.mobileNavItem} onPress={() => router.replace('/')}>
+            {navItems.monitoring.slice(0, 2).map((item) => (
+              <Pressable key={item.path} onPress={() => router.push(item.path as any)} style={styles.mobileNavItem}>
+                <Feather name={item.icon as any} size={24} color={isActive(item.path) ? '#60a5fa' : '#94a3b8'} />
+              </Pressable>
+            ))}
+            {navItems.actions.slice(0, 1).map((item) => (
+              <Pressable key={item.path} onPress={() => router.push(item.path as any)} style={styles.mobileNavItem}>
+                <Feather name={item.icon as any} size={24} color={isActive(item.path) ? '#60a5fa' : '#94a3b8'} />
+              </Pressable>
+            ))}
+            {user.role !== 'auditor' && (
+              <Pressable onPress={() => router.push('/(dashboard)/admin/users' as any)} style={styles.mobileNavItem}>
+                <Feather name="users" size={24} color="#94a3b8" />
+              </Pressable>
+            )}
+            <Pressable style={styles.mobileNavItem} onPress={handleLogout}>
               <Feather name="log-out" size={24} color="#ef4444" />
             </Pressable>
           </View>
@@ -156,6 +217,8 @@ export default function DashboardLayout() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#0b1120' },
   container: { flex: 1, backgroundColor: '#f4f7f9' },
+  loadingContainer: { flex: 1, backgroundColor: '#0b1120', justifyContent: 'center', alignItems: 'center', gap: 16 },
+  loadingText: { color: '#94a3b8', fontSize: 14 },
   sidebar: {
     width: 260,
     backgroundColor: '#0b1120',
@@ -166,57 +229,69 @@ const styles = StyleSheet.create({
   brandContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 20,
     gap: 10,
   },
   brandTitle: { color: '#fff', fontSize: 18, fontWeight: '900' },
-  navSection: { marginBottom: 32 },
+  roleBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 28,
+  },
+  roleDot: { width: 8, height: 8, borderRadius: 4 },
+  roleText: { fontSize: 12, fontWeight: '800', letterSpacing: 0.5 },
+  navSection: { marginBottom: 28 },
   navHeader: {
     color: '#475569',
     fontSize: 10,
     fontWeight: '900',
-    marginBottom: 16,
+    marginBottom: 12,
     letterSpacing: 1.5,
   },
   navItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: 11,
+    paddingHorizontal: 14,
     borderRadius: 10,
-    marginBottom: 8,
+    marginBottom: 4,
   },
   navItemActive: {
     backgroundColor: 'rgba(59, 130, 246, 0.15)',
     borderWidth: 1,
     borderColor: 'rgba(59, 130, 246, 0.3)',
   },
-  navText: { color: '#94a3b8', fontSize: 14, fontWeight: '600', marginLeft: 14 },
+  navText: { color: '#94a3b8', fontSize: 14, fontWeight: '600', marginLeft: 12 },
   navTextActive: { color: '#60a5fa', fontWeight: '800' },
   profileBox: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     backgroundColor: 'rgba(255,255,255,0.05)',
-    padding: 16,
+    padding: 14,
     borderRadius: 12,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   avatar: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#3b82f6',
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
-  avatarText: { color: '#fff', fontWeight: 'bold' },
-  profileName: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
-  profileRole: { color: '#94a3b8', fontSize: 12 },
+  avatarText: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
+  profileName: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
+  profileOfficerId: { color: '#64748b', fontSize: 11, marginTop: 2 },
   logoutBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    padding: 14,
     backgroundColor: 'rgba(239, 68, 68, 0.1)',
     borderRadius: 10,
   },
