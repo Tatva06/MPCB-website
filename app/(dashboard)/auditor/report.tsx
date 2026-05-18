@@ -120,8 +120,9 @@ export default function SubmitReportScreen() {
       router.replace('/(dashboard)/auditor' as any);
 
     } catch (err: any) {
-      console.error(err);
-      setError('Failed to submit report. Please try again.');
+      console.error('Report submission error:', JSON.stringify(err));
+      const msg = err?.message || err?.details || err?.hint || JSON.stringify(err);
+      setError(`Submission failed: ${msg}`);
     } finally {
       setSubmitting(false);
     }
