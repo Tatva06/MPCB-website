@@ -49,6 +49,7 @@ export default function DashboardLayout() {
         monitoring: [
           { label: 'Global Overview', icon: 'globe', path: '/(dashboard)/admin' },
         ],
+        actions: [],
         management: [
           { label: 'User Management', icon: 'users', path: '/(dashboard)/admin/users' },
           { label: 'All Reports', icon: 'clipboard', path: '/(dashboard)/admin/reports' },
@@ -63,6 +64,7 @@ export default function DashboardLayout() {
         monitoring: [
           { label: 'Region Overview', icon: 'map', path: '/(dashboard)/regional' },
         ],
+        actions: [],
         management: [
           { label: 'My Auditors', icon: 'users', path: '/(dashboard)/regional/auditors' },
           { label: 'Region Reports', icon: 'clipboard', path: '/(dashboard)/admin/reports' },
