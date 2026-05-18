@@ -63,7 +63,7 @@ export default function AdminOverviewScreen() {
 
         <View style={isMobile ? styles.gridCol : styles.gridRow}>
           <FadeInView delay={300} translateY={15} style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border, flex: isMobile ? 0 : 1.2 }]}>
-            <Text style={[styles.cardTitle, { color: theme.text }]}>Top High-Risk Factories Globally</Text>
+            <Text style={[styles.cardTitle, { color: theme.text }]}>All Factories Globally</Text>
             <ErrorBoundary>
               {isLeaderboardLoading ? renderSkeletonList(5, 30) : (
                 <View style={styles.leaderboardList}>
@@ -126,7 +126,7 @@ export default function AdminOverviewScreen() {
           <FadeInView delay={700} translateY={20} style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border, flex: isMobile ? 0 : 1 }]}>
             <Text style={[styles.cardTitle, { color: theme.text }]}>Regional Compliance Rates</Text>
             <View style={{ gap: 16 }}>
-              {['Navi Mumbai', 'Tarapur', 'Pune', 'Nagpur'].map((region, i) => (
+              {['Taloja', 'Mahad'].map((region, i) => (
                 <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Text style={{ color: theme.text, fontWeight: '600' }}>{region}</Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, marginLeft: 20 }}>

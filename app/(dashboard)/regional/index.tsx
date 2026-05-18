@@ -35,8 +35,8 @@ export default function RegionalOverviewScreen() {
         <FadeInView delay={100} translateY={-10}>
           <View style={styles.headerRow}>
             <View>
-              <Text style={[styles.pageTitle, { color: theme.text }]}>Navi Mumbai Region Overview</Text>
-              <Text style={[styles.pageSub, { color: theme.textSecondary }]}>Includes Rabale, Mahape, Turbhe, and TTC Industrial Area</Text>
+              <Text style={[styles.pageTitle, { color: theme.text }]}>Taloja Region Overview</Text>
+              <Text style={[styles.pageSub, { color: theme.textSecondary }]}>Monitoring Taloja MIDC Industrial Area</Text>
             </View>
             <View style={styles.badgeRow}>
               <View style={[styles.badge, { backgroundColor: theme.warningBg, borderColor: theme.warningBorder }]}>
@@ -63,11 +63,11 @@ export default function RegionalOverviewScreen() {
 
         <View style={isMobile ? styles.gridCol : styles.gridRow}>
           <FadeInView delay={300} translateY={15} style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border, flex: isMobile ? 0 : 1.2 }]}>
-            <Text style={[styles.cardTitle, { color: theme.text }]}>Top High-Risk Factories in Region</Text>
+            <Text style={[styles.cardTitle, { color: theme.text }]}>All Factories in Region</Text>
             <ErrorBoundary>
               {isLeaderboardLoading ? renderSkeletonList(5, 30) : (
                 <View style={styles.leaderboardList}>
-                  {leaderboard?.slice(0,5).map((factory, i) => <LeaderboardItem key={i} factory={factory} />)}
+                  {leaderboard?.map((factory, i) => <LeaderboardItem key={i} factory={factory} />)}
                 </View>
               )}
             </ErrorBoundary>
