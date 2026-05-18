@@ -1,5 +1,19 @@
 {
   "buildCommand": "npx expo export -p web",
   "outputDirectory": "dist",
-  "framework": "expo"
+  "framework": "expo",
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "header",
+          "key": "x-vercel-ip-country",
+          "value": "(?!IN).*"
+        }
+      ],
+      "destination": "/blocked",
+      "permanent": false
+    }
+  ]
 }

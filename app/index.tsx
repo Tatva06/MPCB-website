@@ -106,7 +106,7 @@ export default function LoginScreen() {
     
     setLocalError('');
     try {
-      await login(officerId.trim(), 'Senior Auditor');
+      await login(officerId.trim(), password);
       router.replace('/(dashboard)');
     } catch (err) {
       // Error handled by AuthContext
