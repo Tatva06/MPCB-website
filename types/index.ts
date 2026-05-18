@@ -36,7 +36,7 @@ export interface Alert {
   cid: string;
 }
 
-export type UserRole = 'superadmin' | 'auditor' | 'viewer';
+export type UserRole = 'superadmin' | 'regional_manager' | 'auditor';
 
 export interface User {
   id: string;
