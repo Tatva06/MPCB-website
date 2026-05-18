@@ -27,16 +27,16 @@ export default function DashboardLayout() {
           <View style={styles.sidebar}>
             <View style={styles.brandContainer}>
               <Feather name="shield" size={28} color="#3b82f6" />
-              <Text style={styles.brandTitle}>MPCB AI-AUDIT</Text>
+              <Text style={styles.brandTitle}>ForensiAir</Text>
             </View>
 
             {/* SECTION 1: REAL-TIME MONITORING */}
             <View style={styles.navSection}>
               <Text style={styles.navHeader}>REAL-TIME MONITORING</Text>
 
-              {/* FIX: push to '/' resolves to index inside (dashboard) group */}
+              {/* FIX: explicitly route to /(dashboard) to avoid collision with root login */}
               <Pressable
-                onPress={() => router.push('/')}
+                onPress={() => router.push('/(dashboard)')}
                 style={[styles.navItem, isActive('/') && styles.navItemActive]}
               >
                 <Feather name="activity" size={18} color={isActive('/') ? '#60a5fa' : '#94a3b8'} />
@@ -116,7 +116,7 @@ export default function DashboardLayout() {
         {isMobile && (
           <View style={styles.bottomNav}>
             <Pressable
-              onPress={() => router.push('/')}
+              onPress={() => router.push('/(dashboard)')}
               style={styles.mobileNavItem}
             >
               <Feather name="activity" size={24} color={isActive('/') ? '#60a5fa' : '#94a3b8'} />

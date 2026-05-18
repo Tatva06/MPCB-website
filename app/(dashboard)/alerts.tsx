@@ -1,300 +1,137 @@
 import { Feather } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  useWindowDimensions,
   View,
 } from 'react-native';
+import { useQuery } from '@tanstack/react-query';
+import { FadeInView } from '../../components/common/FadeInView';
 
-const ALL_ALERTS = [
-  {
-    id: 'ALT-2025-0318',
-    factory: 'Deepak Fertilizers',
-    cluster: 'Taloja MIDC',
-    type: 'Zero Variance Flatline',
-    detail:
-      'SO₂ standard deviation < 0.01 for 6.2 consecutive hours. Value locked at 140 ppm (legal limit: 100 ppm). High probability of DAHS software manipulation.',
-    severity: 'CRITICAL',
-    parameter: 'SO₂',
-    duration: '6.2 hrs',
-    time: '12 mins ago',
-    fingerprints: ['Zero Variance', 'Calibration Lock'],
-    shapScore: 98.4, // FIX: number, not string
-    cid: 'RED',
-  },
-  {
-    id: 'ALT-2025-0317',
-    factory: 'Tata Power Unit 3',
-    cluster: 'Trombay',
-    type: 'Pre-Inspection Emission Dip',
-    detail:
-      'PM₁₀ dropped 68% exactly 4 hours before scheduled CIS inspection on 18 Jul. Pattern matches 2 prior inspection visits. Statistical correlation r = −0.89.',
-    severity: 'HIGH',
-    parameter: 'PM₁₀',
-    duration: '4 hrs',
-    time: '1 hour ago',
-    fingerprints: ['Inspection Dip', 'Rebound Spike'],
-    shapScore: 82.1,
-    cid: 'RED',
-  },
-  {
-    id: 'ALT-2025-0316',
-    factory: 'Reliance Industries',
-    cluster: 'Navi Mumbai',
-    type: 'Night Data Gap',
-    detail:
-      'CEMS transmission interrupted from 11:02 PM to 03:18 AM (4.3 hrs). No valid readings logged. Server-side rejection logs show unusual packet error burst at 10:58 PM.',
-    severity: 'HIGH',
-    parameter: 'NOX',
-    duration: '4.3 hrs',
-    time: '4 hours ago',
-    fingerprints: ['Night Offline', 'Selective Gap'],
-    shapScore: 74.3,
-    cid: 'RED',
-  },
-  {
-    id: 'ALT-2025-0315',
-    factory: 'Hindalco Ltd.',
-    cluster: 'Taloja MIDC',
-    type: 'Cross-Parameter Decoupling',
-    detail:
-      'NOX readings remain stable at 29 ppm while SO₂ is in variance-zero flatline. Physically impossible during normal combustion — indicative of selective sensor manipulation.',
-    severity: 'MEDIUM',
-    parameter: 'SO₂ + NOX',
-    duration: '2.1 hrs',
-    time: '6 hours ago',
-    fingerprints: ['Cross-Param Decoupling'],
-    shapScore: 55.7,
-    cid: 'ORANGE',
-  },
-  {
-    id: 'ALT-2025-0314',
-    factory: 'AARTI Chemicals',
-    cluster: 'Tarapur MIDC',
-    type: 'Calibration Mismatch',
-    detail:
-      'CEMS calibration audit shows discrepancy between reference stack test value (72 ppm SO₂) and sensor-reported value (38 ppm SO₂). Possible biased calibration.',
-    severity: 'MEDIUM',
-    parameter: 'SO₂',
-    duration: '—',
-    time: '1 day ago',
-    fingerprints: ['Calibration Mismatch'],
-    shapScore: 48.2,
-    cid: 'ORANGE',
-  },
-];
+import AlertCard from '../../components/alerts/AlertCard';
+import Skeleton from '../../components/common/Skeleton';
+import { ErrorBoundary } from '../../components/common/ErrorBoundary';
 
-const SEVERITY_COLOR: Record<string, string> = {
-  CRITICAL: '#ef4444',
-  HIGH: '#f97316',
-  MEDIUM: '#eab308',
-};
-const SEVERITY_BG: Record<string, string> = {
-  CRITICAL: '#fef2f2',
-  HIGH: '#fff7ed',
-  MEDIUM: '#fefce8',
-};
-const SEVERITY_BORDER: Record<string, string> = {
-  CRITICAL: '#fecaca',
-  HIGH: '#fed7aa',
-  MEDIUM: '#fef08a',
-};
+import { getAlerts } from '../../services/api';
+import { useThemeColor } from '../../hooks/useThemeColor';
 
 export default function AlertsPage() {
-  const { width } = useWindowDimensions();
-  const isMobile = width < 768;
+  const theme = useThemeColor();
   const [filter, setFilter] = useState<'ALL' | 'CRITICAL' | 'HIGH' | 'MEDIUM'>('ALL');
-  const [expanded, setExpanded] = useState<string | null>('ALT-2025-0318');
 
-  const filtered =
-    filter === 'ALL' ? ALL_ALERTS : ALL_ALERTS.filter((a) => a.severity === filter);
+  const { data: alerts, isLoading } = useQuery({ queryKey: ['alerts'], queryFn: getAlerts });
+
+  const filtered = useMemo(() => {
+    if (!alerts) return [];
+    return filter === 'ALL' ? alerts : alerts.filter((a) => a.severity === filter);
+  }, [alerts, filter]);
+
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case 'CRITICAL': return theme.danger;
+      case 'HIGH': return theme.warning;
+      case 'MEDIUM': return '#eab308';
+      default: return theme.border;
+    }
+  };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView style={[styles.container, { backgroundColor: theme.background }]} showsVerticalScrollIndicator={false}>
 
       {/* Top Bar */}
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.pageTitle}>System Tamper Alerts</Text>
-          <Text style={styles.pageSub}>
+          <Text style={[styles.pageTitle, { color: theme.text }]}>System Tamper Alerts</Text>
+          <Text style={[styles.pageSub, { color: theme.textSecondary }]}>
             Anomalies auto-detected by XGBoost + SHAP explainability engine
           </Text>
         </View>
-        <View style={styles.summaryPills}>
-          <View style={[styles.pill, { backgroundColor: '#fef2f2', borderColor: '#fecaca' }]}>
-            <Feather name="alert-octagon" size={10} color="#ef4444" />
-            <Text style={[styles.pillText, { color: '#b91c1c' }]}>1 CRITICAL</Text>
+        <ErrorBoundary>
+          <View style={styles.summaryPills}>
+            <View style={[styles.pill, { backgroundColor: theme.dangerBg, borderColor: theme.dangerBorder }]}>
+              <Feather name="alert-octagon" size={10} color={theme.danger} />
+              <Text style={[styles.pillText, { color: theme.danger }]}>
+                {isLoading ? '...' : alerts?.filter(a => a.severity === 'CRITICAL').length} CRITICAL
+              </Text>
+            </View>
+            <View style={[styles.pill, { backgroundColor: theme.warningBg, borderColor: theme.warningBorder }]}>
+              <Text style={[styles.pillText, { color: theme.warning }]}>
+                {isLoading ? '...' : alerts?.filter(a => a.severity === 'HIGH').length} HIGH
+              </Text>
+            </View>
+            <View style={[styles.pill, { backgroundColor: '#fefce8', borderColor: '#fef08a' }]}>
+              <Text style={[styles.pillText, { color: '#854d0e' }]}>
+                {isLoading ? '...' : alerts?.filter(a => a.severity === 'MEDIUM').length} MEDIUM
+              </Text>
+            </View>
           </View>
-          <View style={[styles.pill, { backgroundColor: '#fff7ed', borderColor: '#fed7aa' }]}>
-            <Text style={[styles.pillText, { color: '#c2410c' }]}>2 HIGH</Text>
-          </View>
-          <View style={[styles.pill, { backgroundColor: '#fefce8', borderColor: '#fef08a' }]}>
-            <Text style={[styles.pillText, { color: '#854d0e' }]}>2 MEDIUM</Text>
-          </View>
-        </View>
+        </ErrorBoundary>
       </View>
 
       <View style={styles.content}>
 
         {/* Info Box */}
-        <View style={styles.infoBox}>
-          <Feather name="cpu" size={14} color="#1d4ed8" />
-          <Text style={styles.infoText}>
-            All alerts are generated by the MPCB AI Engine using 15 forensic fingerprint vectors
+        <FadeInView delay={100} translateY={-10} style={[styles.infoBox, { backgroundColor: theme.primaryBg, borderColor: theme.primaryBorder }]}>
+          <Feather name="cpu" size={14} color={theme.primary} />
+          <Text style={[styles.infoText, { color: theme.primary }]}>
+            All alerts are generated by the ForensiAir Engine using 15 forensic fingerprint vectors
             including zero-variance detection, inspection-timed dip analysis, and cross-parameter
             decoupling. Each alert includes a SHAP confidence score.
           </Text>
-        </View>
+        </FadeInView>
 
         {/* Filter Tabs */}
         <View style={styles.filterRow}>
-          {(['ALL', 'CRITICAL', 'HIGH', 'MEDIUM'] as const).map((f) => (
-            <Pressable
-              key={f}
-              onPress={() => setFilter(f)}
-              style={[styles.filterTab, filter === f && styles.filterTabActive]}
-            >
-              {f !== 'ALL' && (
-                <View style={[styles.filterDot, { backgroundColor: SEVERITY_COLOR[f] }]} />
-              )}
-              <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>{f}</Text>
-            </Pressable>
-          ))}
+          {(['ALL', 'CRITICAL', 'HIGH', 'MEDIUM'] as const).map((f) => {
+            const isActive = filter === f;
+            return (
+              <Pressable
+                key={f}
+                onPress={() => setFilter(f)}
+                style={[
+                  styles.filterTab, 
+                  { backgroundColor: isActive ? theme.text : theme.surface, borderColor: isActive ? theme.text : theme.border }
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={`Filter by ${f}`}
+                accessibilityState={{ selected: isActive }}
+              >
+                {f !== 'ALL' && (
+                  <View style={[styles.filterDot, { backgroundColor: getSeverityColor(f) }]} />
+                )}
+                <Text style={[styles.filterText, { color: isActive ? theme.surface : theme.textSecondary }]}>{f}</Text>
+              </Pressable>
+            );
+          })}
           <View style={{ flex: 1 }} />
-          <Text style={styles.alertCount}>
-            {filtered.length} alert{filtered.length !== 1 ? 's' : ''}
+          <Text style={[styles.alertCount, { color: theme.textSecondary }]}>
+            {isLoading ? 'Loading...' : `${filtered.length} alert${filtered.length !== 1 ? 's' : ''}`}
           </Text>
         </View>
 
         {/* Alert Cards */}
-        {filtered.map((alert) => (
-          <Pressable
-            key={alert.id}
-            onPress={() => setExpanded(expanded === alert.id ? null : alert.id)}
-            style={[styles.alertCard, { borderLeftColor: SEVERITY_COLOR[alert.severity] }]}
-          >
-            {/* Header Row */}
-            <View style={styles.alertHeader}>
-              <View style={{ flex: 1, gap: 4 }}>
-                <View style={styles.alertTitleRow}>
-                  <Feather
-                    name={alert.severity === 'CRITICAL' ? 'alert-octagon' : 'alert-triangle'}
-                    size={15}
-                    color={SEVERITY_COLOR[alert.severity]}
-                  />
-                  <Text style={styles.alertFactory}>{alert.factory}</Text>
-                  <View
-                    style={[
-                      styles.severityBadge,
-                      {
-                        backgroundColor: SEVERITY_BG[alert.severity],
-                        borderColor: SEVERITY_BORDER[alert.severity],
-                      },
-                    ]}
-                  >
-                    <Text style={[styles.severityText, { color: SEVERITY_COLOR[alert.severity] }]}>
-                      {alert.severity}
-                    </Text>
-                  </View>
-                </View>
-                <Text style={styles.alertType}>{alert.type}</Text>
-                <View style={styles.alertMeta}>
-                  <Text style={styles.alertMetaText}>{alert.cluster}</Text>
-                  <Text style={styles.alertMetaDot}>·</Text>
-                  <Text style={styles.alertMetaText}>{alert.time}</Text>
-                  <Text style={styles.alertMetaDot}>·</Text>
-                  <Text style={styles.alertMetaText}>{alert.parameter}</Text>
-                </View>
-              </View>
-
-              <View style={styles.alertRight}>
-                <Text style={styles.alertId}>{alert.id}</Text>
-                {/* FIX: shapScore is now a number — correct numeric comparison */}
-                <View
-                  style={[
-                    styles.shapBadge,
-                    {
-                      backgroundColor:
-                        alert.shapScore > 80 ? '#fef2f2' : '#fff7ed',
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.shapBadgeText,
-                      { color: alert.shapScore > 80 ? '#b91c1c' : '#c2410c' },
-                    ]}
-                  >
-                    SHAP {alert.shapScore}%
-                  </Text>
-                </View>
-                <Feather
-                  name={expanded === alert.id ? 'chevron-up' : 'chevron-down'}
-                  size={14}
-                  color="#94a3b8"
-                />
-              </View>
-            </View>
-
-            {/* Expanded Detail */}
-            {expanded === alert.id && (
-              <View style={styles.alertDetail}>
-                <View style={styles.divider} />
-
-                <Text style={styles.detailLabel}>FORENSIC DETAIL</Text>
-                <Text style={styles.detailText}>{alert.detail}</Text>
-
-                <View style={styles.detailMetaRow}>
-                  <View style={styles.detailMetaBox}>
-                    <Text style={styles.detailMetaLabel}>Duration</Text>
-                    <Text style={styles.detailMetaValue}>{alert.duration}</Text>
-                  </View>
-                  <View style={styles.detailMetaBox}>
-                    <Text style={styles.detailMetaLabel}>Parameter</Text>
-                    <Text style={styles.detailMetaValue}>{alert.parameter}</Text>
-                  </View>
-                  <View style={styles.detailMetaBox}>
-                    <Text style={styles.detailMetaLabel}>Category</Text>
-                    <Text style={[styles.detailMetaValue, { color: '#ef4444' }]}>{alert.cid}</Text>
-                  </View>
-                </View>
-
-                <Text style={styles.detailLabel}>AI FINGERPRINTS TRIGGERED</Text>
-                <View style={styles.fingerprintRow}>
-                  {alert.fingerprints.map((fp) => (
-                    <View key={fp} style={styles.fpChip}>
-                      <Feather name="zap" size={10} color="#8b5cf6" />
-                      <Text style={styles.fpChipText}>{fp}</Text>
-                    </View>
-                  ))}
-                </View>
-
-                <View style={styles.actionRow}>
-                  <Pressable style={styles.actionBtn}>
-                    <Feather name="eye" size={13} color="#2563eb" />
-                    <Text style={styles.actionBtnText}>View Raw Logs</Text>
-                  </Pressable>
-                  <Pressable style={styles.actionBtn}>
-                    <Feather name="bar-chart-2" size={13} color="#2563eb" />
-                    <Text style={styles.actionBtnText}>SHAP Analysis</Text>
-                  </Pressable>
-                  <Pressable style={[styles.actionBtn, styles.actionBtnDanger]}>
-                    <Feather name="file-text" size={13} color="#ef4444" />
-                    <Text style={[styles.actionBtnText, { color: '#ef4444' }]}>Issue Notice</Text>
-                  </Pressable>
-                </View>
-              </View>
+        <ErrorBoundary>
+          <View style={{ gap: 14 }}>
+            {isLoading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} height={120} borderRadius={14} />
+              ))
+            ) : (
+              filtered.map((alert, i) => (
+                <FadeInView key={alert.id} delay={i * 100} translateY={15}>
+                  <AlertCard alert={alert} />
+                </FadeInView>
+              ))
             )}
-          </Pressable>
-        ))}
+          </View>
+        </ErrorBoundary>
 
         {/* 30-Day Alert Timeline */}
-        <View style={styles.timelineCard}>
-          <Text style={styles.cardTitle}>30-Day Alert Timeline</Text>
-          <Text style={styles.cardSub}>
+        <FadeInView delay={400} style={[styles.timelineCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <Text style={[styles.cardTitle, { color: theme.text }]}>30-Day Alert Timeline</Text>
+          <Text style={[styles.cardSub, { color: theme.textSecondary }]}>
             Daily count of AI-flagged anomalies across all MIDC clusters
           </Text>
           <View style={styles.timelineBars}>
@@ -305,7 +142,7 @@ export default function AlertsPage() {
                     styles.timelineBar,
                     {
                       height: v * 8 + 4,
-                      backgroundColor: v >= 5 ? '#ef4444' : v >= 3 ? '#f97316' : '#3b82f6',
+                      backgroundColor: v >= 5 ? theme.danger : v >= 3 ? theme.warning : theme.primary,
                     },
                   ]}
                 />
@@ -313,10 +150,10 @@ export default function AlertsPage() {
             ))}
           </View>
           <View style={styles.timelineLabels}>
-            <Text style={styles.timelineLabelText}>30 days ago</Text>
-            <Text style={styles.timelineLabelText}>Today</Text>
+            <Text style={[styles.timelineLabelText, { color: theme.textSecondary }]}>30 days ago</Text>
+            <Text style={[styles.timelineLabelText, { color: theme.textSecondary }]}>Today</Text>
           </View>
-        </View>
+        </FadeInView>
 
       </View>
     </ScrollView>
@@ -324,21 +161,19 @@ export default function AlertsPage() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f1f5f9' },
+  container: { flex: 1 },
   topBar: {
-    backgroundColor: '#fff',
     padding: 20,
     paddingHorizontal: 24,
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     flexWrap: 'wrap',
     gap: 12,
   },
-  pageTitle: { fontSize: 20, fontWeight: '900', color: '#0f172a', marginBottom: 4 },
-  pageSub: { fontSize: 12, color: '#64748b', fontWeight: '500' },
+  pageTitle: { fontSize: 20, fontWeight: '900', marginBottom: 4 },
+  pageSub: { fontSize: 12, fontWeight: '500' },
   summaryPills: { flexDirection: 'row', gap: 6 },
   pill: {
     flexDirection: 'row',
@@ -355,13 +190,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 10,
-    backgroundColor: '#eff6ff',
     borderWidth: 1,
-    borderColor: '#bfdbfe',
     borderRadius: 10,
     padding: 14,
   },
-  infoText: { color: '#1d4ed8', fontSize: 12, lineHeight: 20, flex: 1 },
+  infoText: { fontSize: 12, lineHeight: 20, flex: 1 },
   filterRow: { flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap' },
   filterTab: {
     flexDirection: 'row',
@@ -371,110 +204,21 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    backgroundColor: '#fff',
   },
-  filterTabActive: { backgroundColor: '#0f172a', borderColor: '#0f172a' },
   filterDot: { width: 6, height: 6, borderRadius: 3 },
-  filterText: { fontSize: 12, fontWeight: '600', color: '#64748b' },
-  filterTextActive: { color: '#fff' },
-  alertCount: { fontSize: 12, color: '#94a3b8', fontWeight: '500' },
-  alertCard: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    borderLeftWidth: 4,
-    overflow: 'hidden',
-  },
-  alertHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    padding: 16,
-    gap: 12,
-  },
-  alertTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-  alertFactory: { fontSize: 15, fontWeight: '800', color: '#0f172a', flex: 1 },
-  severityBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20, borderWidth: 1 },
-  severityText: { fontSize: 10, fontWeight: '800' },
-  alertType: { fontSize: 13, color: '#475569', fontWeight: '600', marginBottom: 6 },
-  alertMeta: { flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap' },
-  alertMetaText: { fontSize: 11, color: '#94a3b8' },
-  alertMetaDot: { fontSize: 11, color: '#cbd5e1', marginHorizontal: 2 },
-  alertRight: { alignItems: 'flex-end', gap: 6 },
-  alertId: { fontSize: 10, color: '#cbd5e1', fontWeight: '600', fontFamily: 'monospace' },
-  shapBadge: { paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 },
-  shapBadgeText: { fontSize: 10, fontWeight: '800' },
-  alertDetail: { paddingHorizontal: 16, paddingBottom: 16 },
-  divider: { height: 1, backgroundColor: '#f1f5f9', marginBottom: 14 },
-  detailLabel: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#94a3b8',
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-    marginBottom: 6,
-    marginTop: 12,
-  },
-  detailText: { fontSize: 13, color: '#475569', lineHeight: 22 },
-  detailMetaRow: { flexDirection: 'row', gap: 10, marginTop: 14 },
-  detailMetaBox: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
-    borderRadius: 8,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  detailMetaLabel: {
-    fontSize: 9,
-    color: '#94a3b8',
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    marginBottom: 3,
-  },
-  detailMetaValue: { fontSize: 14, fontWeight: '800', color: '#0f172a' },
-  fingerprintRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginTop: 4 },
-  fpChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(139,92,246,0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(139,92,246,0.2)',
-    borderRadius: 20,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-  },
-  fpChipText: { fontSize: 11, color: '#7c3aed', fontWeight: '600' },
-  actionRow: { flexDirection: 'row', gap: 8, marginTop: 16, flexWrap: 'wrap' },
-  actionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: '#eff6ff',
-    borderWidth: 1,
-    borderColor: '#bfdbfe',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  actionBtnDanger: { backgroundColor: '#fef2f2', borderColor: '#fecaca' },
-  actionBtnText: { fontSize: 12, color: '#2563eb', fontWeight: '600' },
+  filterText: { fontSize: 12, fontWeight: '600' },
+  alertCount: { fontSize: 12, fontWeight: '500' },
   timelineCard: {
-    backgroundColor: '#fff',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
     padding: 20,
     marginTop: 4,
   },
-  cardTitle: { fontSize: 14, fontWeight: '800', color: '#0f172a', marginBottom: 4 },
-  cardSub: { fontSize: 11, color: '#64748b', marginBottom: 16 },
+  cardTitle: { fontSize: 14, fontWeight: '800', marginBottom: 4 },
+  cardSub: { fontSize: 11, marginBottom: 16 },
   timelineBars: { flexDirection: 'row', alignItems: 'flex-end', gap: 3, height: 52 },
   timelineBarCol: { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
   timelineBar: { width: '100%', minHeight: 4, borderRadius: 2 },
   timelineLabels: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
-  timelineLabelText: { fontSize: 10, color: '#94a3b8' },
+  timelineLabelText: { fontSize: 10 },
 });

@@ -11,7 +11,10 @@ import {
   TextInput,
   useWindowDimensions,
   View,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
+import { useAuth } from '../context/AuthContext';
 
 const SYSTEM_ALERTS = [
   'CEMS node DF-SO2-04 flagged — zero variance 6.2h',
@@ -24,14 +27,17 @@ export default function LoginScreen() {
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
 
+  const { login, isLoading, error } = useAuth();
   const [officerId, setOfficerId] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [localError, setLocalError] = useState('');
+  
   const [idFocused, setIdFocused] = useState(false);
   const [pwFocused, setPwFocused] = useState(false);
-  const [error, setError] = useState('');
   const [tickerIdx, setTickerIdx] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
+
+  const passwordRef = useRef<TextInput>(null);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
@@ -62,18 +68,21 @@ export default function LoginScreen() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!officerId || !password) {
-      setError('Both Officer ID and Authorization Key are required.');
+      setLocalError('Both Officer ID and Authorization Key are required.');
       return;
     }
-    setError('');
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    setLocalError('');
+    try {
+      await login(officerId, 'Senior Auditor');
       router.replace('/(dashboard)');
-    }, 1400);
+    } catch (err) {
+      // Error handled by AuthContext
+    }
   };
+
+  const displayError = localError || error;
 
   return (
     <View style={[styles.container, { flexDirection: isMobile ? 'column' : 'row' }]}>
@@ -97,7 +106,7 @@ export default function LoginScreen() {
           <View style={styles.logoBox}>
             <Feather name="shield" size={isMobile ? 28 : 40} color="#fff" />
           </View>
-          <Text style={[styles.brandTitle, { fontSize: isMobile ? 26 : 40 }]}>MPCB AI-AUDIT</Text>
+          <Text style={[styles.brandTitle, { fontSize: isMobile ? 26 : 40 }]}>ForensiAir</Text>
           <Text style={styles.brandSubtitle}>Centralized Telemetry &{'\n'}Fraud Detection System</Text>
           <Text style={styles.versionTag}>v3.1.4 · CPCB Compliant · TLS 1.3 Encrypted</Text>
 
@@ -141,8 +150,12 @@ export default function LoginScreen() {
       </View>
 
       {/* ── Right Panel (Login Form) ── */}
-      <ScrollView contentContainerStyle={[styles.formPanel, { padding: isMobile ? 24 : 48 }]}>
-        <Animated.View style={[styles.formContainer, { opacity: fadeAnim }]}>
+      <KeyboardAvoidingView 
+        style={{ flex: 1, backgroundColor: '#f4f7f9' }} 
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView contentContainerStyle={[styles.formPanel, { padding: isMobile ? 24 : 48 }]}>
+          <Animated.View style={[styles.formContainer, { opacity: fadeAnim }]}>
 
           <View style={styles.formHeaderRow}>
             <View>
@@ -154,10 +167,10 @@ export default function LoginScreen() {
             </View>
           </View>
 
-          {error ? (
+          {displayError ? (
             <View style={styles.errorBox}>
               <Feather name="alert-triangle" size={14} color="#b91c1c" />
-              <Text style={styles.errorText}>{error}</Text>
+              <Text style={styles.errorText}>{displayError}</Text>
             </View>
           ) : null}
 
@@ -173,8 +186,14 @@ export default function LoginScreen() {
                 value={officerId}
                 onChangeText={setOfficerId}
                 autoCapitalize="characters"
+                autoCorrect={false}
+                autoComplete="off"
+                returnKeyType="next"
+                onSubmitEditing={() => passwordRef.current?.focus()}
+                blurOnSubmit={false}
                 onFocus={() => setIdFocused(true)}
                 onBlur={() => setIdFocused(false)}
+                accessibilityLabel="Officer ID Input"
               />
             </View>
           </View>
@@ -191,29 +210,34 @@ export default function LoginScreen() {
                 secureTextEntry={!showPassword}
                 value={password}
                 onChangeText={setPassword}
+                ref={passwordRef}
+                returnKeyType="done"
+                onSubmitEditing={handleLogin}
                 onFocus={() => setPwFocused(true)}
                 onBlur={() => setPwFocused(false)}
+                accessibilityLabel="Password Input"
               />
-              <Pressable onPress={() => setShowPassword(v => !v)} style={{ padding: 8 }}>
+              <Pressable 
+                onPress={() => setShowPassword(v => !v)} 
+                style={{ padding: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="Toggle Password Visibility"
+              >
                 <Feather name={showPassword ? 'eye-off' : 'eye'} size={16} color="#94a3b8" />
               </Pressable>
             </View>
           </View>
 
-          {/* Role Selector */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Access Role</Text>
-            <View style={styles.roleRow}>
-              {['Field Officer', 'Senior Auditor', 'Chief Inspector'].map((role) => (
-                <Pressable key={role} style={styles.roleChip}>
-                  <Text style={styles.roleChipText}>{role}</Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
+
 
           {/* Login Button */}
-          <Pressable style={[styles.loginBtn, isLoading && { opacity: 0.8 }]} onPress={handleLogin} disabled={isLoading}>
+          <Pressable 
+            style={[styles.loginBtn, isLoading && { opacity: 0.8 }]} 
+            onPress={handleLogin} 
+            disabled={isLoading}
+            accessibilityRole="button"
+            accessibilityLabel="Login Button"
+          >
             {isLoading ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                 <ActivityIndicator color="#fff" size="small" />
@@ -221,7 +245,6 @@ export default function LoginScreen() {
               </View>
             ) : (
               <>
-                <Feather name="log-in" size={16} color="#fff" />
                 <Text style={styles.loginBtnText}>Access Dashboard</Text>
                 <Feather name="arrow-right" size={16} color="#fff" />
               </>
@@ -230,18 +253,18 @@ export default function LoginScreen() {
 
           {/* Footer Links */}
           <View style={styles.footerLinks}>
-            <Text style={styles.footerLink}>Forgot credentials?</Text>
-            <Text style={styles.footerDot}>·</Text>
-            <Text style={styles.footerLink}>IT Support</Text>
-            <Text style={styles.footerDot}>·</Text>
-            <Text style={styles.footerLink}>Help Manual</Text>
+            <Pressable onPress={() => router.push('/forgot-credentials')} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Feather name="lock" size={12} color="#3b82f6" />
+              <Text style={styles.footerLink}>Forgot credentials?</Text>
+            </Pressable>
           </View>
 
           <Text style={styles.footerLegal}>
             © 2025 Maharashtra Pollution Control Board · Ministry of Environment, Forest and Climate Change
           </Text>
         </Animated.View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -299,13 +322,22 @@ const styles = StyleSheet.create({
   tickerLabel: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   tickerLabelText: { color: '#10b981', fontSize: 9, fontWeight: '800', letterSpacing: 1.2 },
   tickerText: { color: '#64748b', fontSize: 11, flex: 1 },
-  formPanel: { flexGrow: 1, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' },
-  formContainer: { width: '100%', maxWidth: 460 },
+  formPanel: { flexGrow: 1, backgroundColor: '#f4f7f9', justifyContent: 'center', alignItems: 'center' },
+  formContainer: { 
+    width: '100%', maxWidth: 460, 
+    backgroundColor: '#fff', 
+    padding: 32, 
+    borderRadius: 16, 
+    borderWidth: 1, borderColor: '#e2e8f0',
+    borderTopWidth: 4, borderTopColor: '#1e3a8a',
+    shadowColor: '#0f172a', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.05, shadowRadius: 20, elevation: 4 
+  },
   formHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 },
   formHeader: { fontSize: 28, fontWeight: '900', color: '#0f172a', marginBottom: 6 },
   formSubHeader: { fontSize: 14, color: '#64748b', lineHeight: 22 },
   mpcbBadge: {
-    backgroundColor: '#0f172a', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6,
+    backgroundColor: '#1e3a8a', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)'
   },
   mpcbBadgeText: { color: '#fff', fontSize: 11, fontWeight: '900', letterSpacing: 1.5 },
   errorBox: {
@@ -318,11 +350,11 @@ const styles = StyleSheet.create({
   label: { fontSize: 11, fontWeight: '700', color: '#475569', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 },
   inputWrapper: {
     flexDirection: 'row', alignItems: 'center',
-    borderWidth: 1.5, borderColor: '#e2e8f0',
-    borderRadius: 10, paddingHorizontal: 14,
+    borderWidth: 1, borderColor: '#cbd5e1',
+    borderRadius: 8, paddingHorizontal: 14,
     backgroundColor: '#f8fafc', minHeight: 50,
   },
-  inputWrapperFocused: { borderColor: '#3b82f6', backgroundColor: '#eff6ff' },
+  inputWrapperFocused: { borderColor: '#1e3a8a', backgroundColor: '#fff', shadowColor: '#1e3a8a', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 },
   inputIcon: { marginRight: 10 },
   input: { flex: 1, fontSize: 15, color: '#0f172a', height: 50 },
   roleRow: { flexDirection: 'row', gap: 8 },
@@ -331,14 +363,22 @@ const styles = StyleSheet.create({
     borderRadius: 8, paddingVertical: 10, alignItems: 'center',
     backgroundColor: '#f8fafc',
   },
+  roleChipActive: {
+    borderColor: '#3b82f6',
+    backgroundColor: '#eff6ff',
+  },
   roleChipText: { color: '#475569', fontSize: 12, fontWeight: '600' },
+  roleChipTextActive: {
+    color: '#3b82f6',
+  },
   loginBtn: {
-    backgroundColor: '#2563eb', height: 52, borderRadius: 10,
-    flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 8,
+    backgroundColor: '#1e3a8a', height: 52, borderRadius: 8,
+    flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 12,
+    shadowColor: '#1e3a8a', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
   },
   loginBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
   footerLinks: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 20 },
   footerLink: { color: '#3b82f6', fontSize: 13 },
   footerDot: { color: '#cbd5e1', fontSize: 13 },
-  footerLegal: { color: '#cbd5e1', fontSize: 10, textAlign: 'center', marginTop: 24, lineHeight: 16 },
+  footerLegal: { color: '#94a3b8', fontSize: 10, textAlign: 'center', marginTop: 24, lineHeight: 16 },
 });
