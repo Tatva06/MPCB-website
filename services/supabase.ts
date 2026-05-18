@@ -15,12 +15,29 @@ const ExpoSecureStoreAdapter = {
   },
 };
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'YOUR_SUPABASE_URL';
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://placeholder-project.supabase.co';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'YOUR_SUPABASE_ANON_KEY';
+
+const WebStorageAdapter = {
+  getItem: (key: string) => {
+    if (typeof localStorage === 'undefined') return null;
+    return localStorage.getItem(key);
+  },
+  setItem: (key: string, value: string) => {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(key, value);
+    }
+  },
+  removeItem: (key: string) => {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(key);
+    }
+  },
+};
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    storage: Platform.OS === 'web' ? localStorage : ExpoSecureStoreAdapter,
+    storage: Platform.OS === 'web' ? WebStorageAdapter : ExpoSecureStoreAdapter,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
