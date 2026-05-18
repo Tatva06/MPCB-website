@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, Pressable, KeyboardAvoidingView, Platform, SafeAreaView } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -6,6 +6,34 @@ import { router } from 'expo-router';
 export default function ForgotCredentialsScreen() {
   const [officerId, setOfficerId] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState('');
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (cooldown > 0) {
+      timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [cooldown]);
+
+  const handleSubmit = () => {
+    const cleanOfficerId = officerId.trim();
+    if (!cleanOfficerId) {
+      setError('Officer ID is required.');
+      return;
+    }
+
+    const idRegex = /^[A-Za-z0-9-]+$/;
+    if (cleanOfficerId.length < 4 || !idRegex.test(cleanOfficerId)) {
+      setError('Invalid format. Only alphanumeric characters and hyphens are allowed.');
+      return;
+    }
+
+    setError('');
+    setSubmitted(true);
+    setCooldown(60); // 60 seconds cooldown to prevent spamming
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -24,10 +52,22 @@ export default function ForgotCredentialsScreen() {
             Enter your Officer ID to receive a secure reset link via your registered government email.
           </Text>
 
+          {error ? (
+            <View style={styles.errorBox}>
+              <Feather name="alert-triangle" size={14} color="#b91c1c" />
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : null}
+
           {submitted ? (
             <View style={styles.successBox}>
               <Feather name="check-circle" size={20} color="#10b981" />
-              <Text style={styles.successText}>Reset instructions have been sent to your registered email address.</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.successText}>Reset instructions have been sent to your registered email address.</Text>
+                {cooldown > 0 && (
+                  <Text style={styles.cooldownText}>You can request again in {cooldown}s</Text>
+                )}
+              </View>
             </View>
           ) : (
             <View style={styles.form}>
@@ -38,12 +78,19 @@ export default function ForgotCredentialsScreen() {
                   placeholder="Officer ID (e.g. MPCB-01)"
                   placeholderTextColor="#64748b"
                   value={officerId}
-                  onChangeText={setOfficerId}
+                  onChangeText={(text) => {
+                    setOfficerId(text);
+                    setError('');
+                  }}
                   autoCapitalize="characters"
                   autoCorrect={false}
                 />
               </View>
-              <Pressable style={styles.submitBtn} onPress={() => setSubmitted(true)}>
+              <Pressable 
+                style={[styles.submitBtn, cooldown > 0 && { opacity: 0.5 }]} 
+                onPress={handleSubmit}
+                disabled={cooldown > 0}
+              >
                 <Text style={styles.submitBtnText}>Request Reset Link</Text>
                 <Feather name="arrow-right" size={16} color="#fff" />
               </Pressable>
@@ -81,11 +128,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10,
   },
   submitBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  errorBox: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#fef2f2', borderWidth: 1, borderColor: '#fecaca',
+    borderRadius: 8, padding: 12, marginBottom: 16,
+  },
+  errorText: { color: '#b91c1c', fontSize: 13, flex: 1 },
   successBox: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     backgroundColor: 'rgba(16, 185, 129, 0.1)',
     borderWidth: 1, borderColor: 'rgba(16, 185, 129, 0.3)',
     padding: 16, borderRadius: 10,
   },
-  successText: { color: '#10b981', fontSize: 14, lineHeight: 20, flex: 1 },
+  successText: { color: '#10b981', fontSize: 14, lineHeight: 20 },
+  cooldownText: { color: '#94a3b8', fontSize: 12, marginTop: 4 },
 });

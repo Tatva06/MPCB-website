@@ -68,14 +68,45 @@ export default function LoginScreen() {
     return () => clearInterval(interval);
   }, []);
 
+  const validateInputs = () => {
+    const cleanOfficerId = officerId.trim();
+    if (!cleanOfficerId || !password) {
+      return 'Both Officer ID and Authorization Key are required.';
+    }
+    
+    // Officer ID Validation (Alphanumeric and hyphens only, min 4 chars)
+    const idRegex = /^[A-Za-z0-9-]+$/;
+    if (cleanOfficerId.length < 4 || !idRegex.test(cleanOfficerId)) {
+      return 'Invalid Officer ID format. Only alphanumeric characters and hyphens are allowed.';
+    }
+
+    // Password Validation (Min 8 chars, 1 uppercase, 1 number, 1 special char)
+    if (password.length < 8) {
+      return 'Authorization Key must be at least 8 characters long.';
+    }
+    if (!/[A-Z]/.test(password)) {
+      return 'Authorization Key must contain at least one uppercase letter.';
+    }
+    if (!/[0-9]/.test(password)) {
+      return 'Authorization Key must contain at least one number.';
+    }
+    if (!/[^A-Za-z0-9]/.test(password)) {
+      return 'Authorization Key must contain at least one special character.';
+    }
+
+    return null;
+  };
+
   const handleLogin = async () => {
-    if (!officerId || !password) {
-      setLocalError('Both Officer ID and Authorization Key are required.');
+    const validationError = validateInputs();
+    if (validationError) {
+      setLocalError(validationError);
       return;
     }
+    
     setLocalError('');
     try {
-      await login(officerId, 'Senior Auditor');
+      await login(officerId.trim(), 'Senior Auditor');
       router.replace('/(dashboard)');
     } catch (err) {
       // Error handled by AuthContext
