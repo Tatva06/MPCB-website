@@ -8,11 +8,11 @@ import {
   View,
 } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { FadeInView } from '../../components/common/FadeInView';
+import { FadeInView } from '../../../components/common/FadeInView';
 
-import AlertCard from '../../components/alerts/AlertCard';
-import Skeleton from '../../components/common/Skeleton';
-import { ErrorBoundary } from '../../components/common/ErrorBoundary';
+import AlertCard from '../../../components/alerts/AlertCard';
+import Skeleton from '../../../components/common/Skeleton';
+import { ErrorBoundary } from '../../../components/common/ErrorBoundary';
 
 import { getAlerts } from '../../services/api';
 import { useThemeColor } from '../../hooks/useThemeColor';

@@ -102,10 +102,19 @@ export default function SubmitReportScreen() {
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Feather name="arrow-left" size={16} color="#60a5fa" />
-          <Text style={styles.backText}>Back</Text>
-        </Pressable>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+          <Pressable onPress={() => router.back()} style={styles.backBtn}>
+            <Feather name="arrow-left" size={16} color="#60a5fa" />
+            <Text style={styles.backText}>Back</Text>
+          </Pressable>
+          <Pressable 
+            onPress={() => router.push('/(dashboard)/auditor/formal-report')} 
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(59,130,246,0.1)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 }}
+          >
+            <Feather name="file-text" size={14} color="#60a5fa" />
+            <Text style={{ color: '#60a5fa', fontSize: 12, fontWeight: '700' }}>View MPCB Formal Format</Text>
+          </Pressable>
+        </View>
         <Text style={styles.pageTitle}>Submit Inspection Report</Text>
         <Text style={styles.pageSub}>Complete your assigned factory audits</Text>
       </View>
