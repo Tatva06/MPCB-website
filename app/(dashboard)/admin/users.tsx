@@ -48,7 +48,6 @@ export default function UserManagementScreen() {
   const [newFullName, setNewFullName] = useState('');
   const [newRole, setNewRole] = useState<UserRole>('auditor');
   const [newRegion, setNewRegion] = useState('');
-  const [newPassword, setNewPassword] = useState('');
 
   // Redirect if not superadmin
   useEffect(() => {
@@ -73,17 +72,13 @@ export default function UserManagementScreen() {
   };
 
   const handleAddOfficer = async () => {
-    if (!newOfficerId.trim() || !newFullName.trim() || !newPassword.trim()) {
-      setError('Officer ID, Full Name, and Password are required.');
+    if (!newOfficerId.trim() || !newFullName.trim()) {
+      setError('Officer ID and Full Name are required.');
       return;
     }
     const idRegex = /^[A-Za-z0-9-]+$/;
     if (!idRegex.test(newOfficerId.trim())) {
       setError('Officer ID can only contain letters, numbers, and hyphens.');
-      return;
-    }
-    if (newPassword.length < 8) {
-      setError('Password must be at least 8 characters.');
       return;
     }
 
@@ -92,19 +87,20 @@ export default function UserManagementScreen() {
 
     const email = `${newOfficerId.trim().toLowerCase()}@mpcb.gov.in`;
 
-    // Note: Creating auth users requires service_role key - this creates a profile entry
-    // In production, use a Supabase Edge Function with service_role key
-    // For now, insert profile — SuperAdmin creates auth user in Supabase dashboard
-    const { error: profileError } = await supabase.from('profiles').insert({
-      id: crypto.randomUUID(), // Will be replaced once auth user is created
-      officer_id: newOfficerId.trim().toUpperCase(),
-      role: newRole,
-      full_name: newFullName.trim(),
-      region: newRegion.trim() || null,
+    // Call the secure SQL function that looks up the auth user by email
+    const { data, error: rpcError } = await supabase.rpc('create_officer_profile', {
+      p_email: email,
+      p_officer_id: newOfficerId.trim().toUpperCase(),
+      p_role: newRole,
+      p_full_name: newFullName.trim(),
+      p_region: newRegion.trim() || null,
     });
 
-    if (profileError) {
-      setError('Create the auth user in Supabase dashboard first with email: ' + email);
+    if (rpcError || (typeof data === 'string' && data.startsWith('error:'))) {
+      const msg = typeof data === 'string' && data.startsWith('error:')
+        ? `Auth user not found. Go to Supabase Dashboard → Authentication → Add User with email: ${email}`
+        : 'Failed to add officer. Check Supabase logs.';
+      setError(msg);
     } else {
       setShowAddModal(false);
       resetForm();
@@ -137,7 +133,6 @@ export default function UserManagementScreen() {
     setNewFullName('');
     setNewRole('auditor');
     setNewRegion('');
-    setNewPassword('');
     setError('');
   };
 
@@ -286,15 +281,15 @@ export default function UserManagementScreen() {
             </View>
 
             <Text style={styles.modalNote}>
-              ⚠️ First create the auth user in Supabase Dashboard with email:{'\n'}
-              <Text style={{ color: '#60a5fa' }}>{newOfficerId ? `${newOfficerId.toLowerCase()}@mpcb.gov.in` : 'officerId@mpcb.gov.in'}</Text>
+              ℹ️ First create the auth user in Supabase Dashboard → Authentication → Add User{`\n`}
+              with email: <Text style={{ color: '#60a5fa', fontWeight: '700' }}>{newOfficerId ? `${newOfficerId.toLowerCase()}@mpcb.gov.in` : 'officerId@mpcb.gov.in'}</Text>{`\n`}
+              Then fill this form to assign their profile and role.
             </Text>
 
             {[
-              { label: 'Officer ID (e.g. MPCB-FI-02)', value: newOfficerId, set: setNewOfficerId, caps: true },
+              { label: 'Officer ID (e.g. MPCB-AUD-01)', value: newOfficerId, set: setNewOfficerId, caps: true },
               { label: 'Full Name', value: newFullName, set: setNewFullName, caps: false },
               { label: 'Region (optional)', value: newRegion, set: setNewRegion, caps: false },
-              { label: 'Password (min 8 chars)', value: newPassword, set: setNewPassword, caps: false, secure: true },
             ].map((field) => (
               <View key={field.label} style={styles.modalField}>
                 <Text style={styles.modalLabel}>{field.label}</Text>
@@ -303,8 +298,8 @@ export default function UserManagementScreen() {
                   value={field.value}
                   onChangeText={field.set}
                   autoCapitalize={field.caps ? 'characters' : 'words'}
-                  secureTextEntry={field.secure}
                   placeholderTextColor="#475569"
+                  placeholder={field.label}
                 />
               </View>
             ))}
