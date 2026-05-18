@@ -46,14 +46,16 @@ export default function DashboardLayout() {
 
     if (user.role === 'superadmin') {
       return {
-        monitoring: common,
+        monitoring: [
+          { label: 'Global Overview', icon: 'globe', path: '/(dashboard)/admin' },
+        ],
         actions: [
-          { label: 'Compliance Report', icon: 'file-text', path: '/(dashboard)/report' },
           { label: 'Generate Legal Notice', icon: 'download', path: '/modal' },
         ],
         management: [
           { label: 'User Management', icon: 'users', path: '/(dashboard)/admin/users' },
           { label: 'All Reports', icon: 'clipboard', path: '/(dashboard)/admin/reports' },
+          { label: 'System Logs', icon: 'activity', path: '/(dashboard)/admin/logs' },
           { label: 'System Settings', icon: 'settings', path: '/(dashboard)/admin/settings' },
         ],
       };
@@ -61,14 +63,15 @@ export default function DashboardLayout() {
 
     if (user.role === 'regional_manager') {
       return {
-        monitoring: common,
+        monitoring: [
+          { label: 'Region Overview', icon: 'map', path: '/(dashboard)/regional' },
+        ],
         actions: [
-          { label: 'Compliance Report', icon: 'file-text', path: '/(dashboard)/report' },
           { label: 'Generate Legal Notice', icon: 'download', path: '/modal' },
         ],
         management: [
           { label: 'My Auditors', icon: 'users', path: '/(dashboard)/regional/auditors' },
-          { label: 'Pending Inspections', icon: 'clock', path: '/(dashboard)/regional/inspections' },
+          { label: 'Region Reports', icon: 'clipboard', path: '/(dashboard)/regional/reports' },
         ],
       };
     }
@@ -76,11 +79,11 @@ export default function DashboardLayout() {
     // auditor
     return {
       monitoring: [
-        { label: 'My Factories', icon: 'activity', path: '/(dashboard)' },
-        { label: 'My Alerts', icon: 'alert-triangle', path: '/(dashboard)/alerts' },
+        { label: 'My Factories', icon: 'activity', path: '/(dashboard)/auditor' },
+        { label: 'My Alerts', icon: 'alert-triangle', path: '/(dashboard)/auditor/alerts' },
       ],
       actions: [
-        { label: 'Submit Report', icon: 'file-text', path: '/(dashboard)/report' },
+        { label: 'Submit Report', icon: 'file-text', path: '/(dashboard)/auditor/report' },
       ],
       management: [],
     };

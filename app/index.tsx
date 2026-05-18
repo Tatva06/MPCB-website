@@ -97,11 +97,11 @@ export default function LoginScreen() {
 
   const redirectByRole = (role: string) => {
     if (role === 'superadmin') {
-      router.replace('/(dashboard)/admin/users' as any);
+      router.replace('/(dashboard)/admin' as any);
     } else if (role === 'regional_manager') {
-      router.replace('/(dashboard)/regional/auditors' as any);
+      router.replace('/(dashboard)/regional' as any);
     } else {
-      router.replace('/(dashboard)');
+      router.replace('/(dashboard)/auditor' as any);
     }
   };
 
