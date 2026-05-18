@@ -45,6 +45,7 @@ export default function RegionalAuditorsScreen() {
   const [auditors, setAuditors] = useState<AuditorProfile[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [myRegion, setMyRegion] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'auditors' | 'assignments'>('auditors');
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -71,13 +72,37 @@ export default function RegionalAuditorsScreen() {
   const fetchData = async () => {
     setLoading(true);
 
-    // Fetch auditors
-    const auditorsQuery = supabase.from('profiles').select('id, officer_id, full_name, region').eq('role', 'auditor');
+    // For Regional Manager: fetch their region first, then filter auditors
+    let regionToFilter: string | null = null;
+    if (user?.role === 'regional_manager') {
+      const { data: myProfile } = await supabase
+        .from('profiles')
+        .select('region')
+        .eq('id', user.id)
+        .single();
+      regionToFilter = myProfile?.region || null;
+      setMyRegion(regionToFilter);
+    }
+
+    // Fetch auditors – filtered by region for RMs, all for superadmin
+    let auditorsQuery = supabase
+      .from('profiles')
+      .select('id, officer_id, full_name, region')
+      .eq('role', 'auditor');
+    if (regionToFilter) {
+      auditorsQuery = auditorsQuery.eq('region', regionToFilter);
+    }
     const { data: auditorsData } = await auditorsQuery.order('full_name');
     if (auditorsData) setAuditors(auditorsData as AuditorProfile[]);
 
-    // Fetch assignments
-    const assignQuery = supabase.from('factory_assignments').select('*').order('created_at', { ascending: false });
+    // Fetch assignments – RMs only see their region's assignments
+    let assignQuery = supabase
+      .from('factory_assignments')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (regionToFilter) {
+      assignQuery = assignQuery.eq('region', regionToFilter);
+    }
     const { data: assignData } = await assignQuery;
     if (assignData) setAssignments(assignData as Assignment[]);
 
@@ -111,11 +136,28 @@ export default function RegionalAuditorsScreen() {
 
     if (!insertError) {
       await logActivity('factory_assigned', `Assigned ${factory?.name} to ${auditor?.officer_id}`);
+      // Optimistically update the assignments list immediately (don't wait for refetch)
+      const newAssignment: Assignment = {
+        id: Date.now().toString(), // temporary ID until refetch
+        factory_name: factory?.name || 'Unknown',
+        factory_id: factory?.id || null,
+        region: myProfile?.region || auditor?.region || 'Unknown',
+        assigned_officer_id: auditor?.officer_id || '',
+        status: 'pending',
+        due_date: dueDate || null,
+        notes: notes.trim() || null,
+        created_at: new Date().toISOString(),
+      };
+      setAssignments(prev => [newAssignment, ...prev]);
       setShowAssignModal(false);
       resetForm();
+      // Refetch in background to get the real DB-generated ID
       fetchData();
+      // Switch to assignments tab so user sees the new entry immediately
+      setActiveTab('assignments');
     } else {
-      setError('Failed to create assignment. Please try again.');
+      console.error('Assignment insert error:', insertError);
+      setError(`Failed to create assignment: ${insertError.message}`);
     }
     setActionLoading(false);
   };
